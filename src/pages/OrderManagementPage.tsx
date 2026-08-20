@@ -30,10 +30,10 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
 
       {/* 70% calendar / 30% deadlines, side-by-side from md breakpoint up */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <div className="md:w-[70%]">
+        <div className="md:w-[50%]">
           <MiniCalendar orders={orders} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
         </div>
-        <div className="md:w-[30%]">
+        <div className="md:w-[50%]">
           <DeadlinePanel orders={orders} selectedDate={selectedDate} onClear={() => setSelectedDate(null)} />
         </div>
       </div>

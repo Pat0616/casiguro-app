@@ -16,7 +16,7 @@ export default function Sidebar({ active, onNavigate, unreadCount, onLogout }: S
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 py-6">
-        <Logo />
+       <div className="sidebar-logocard"></div>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {NAV_ITEMS.map((item) => {
