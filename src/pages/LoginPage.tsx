@@ -1,9 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Eye, EyeOff, Lock, User } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { GRADIENT_TEXT } from "@/lib/constants";
-import Field, { inputClass } from "@/components/ui/Field";
-import Button from "@/components/ui/Button";
+import '../styles/loginpage.css';
 
 export default function LoginPage({ onLogin }: { onLogin: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,79 +11,222 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 sm:p-6">
-      <div className="relative flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl md:flex-row">
-        {/* Left brand panel */}
-        <div className="relative hidden w-full flex-col justify-center overflow-hidden border-b border-slate-100 px-10 py-16 md:flex md:w-1/2 md:border-b-0 md:border-r">
-          <div className="pointer-events-none absolute inset-0" style={dotStyle} />
-          <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-gradient-to-br from-pink-500 via-fuchsia-500 to-sky-500 opacity-30 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-gradient-to-tr from-yellow-300 via-fuchsia-300 to-sky-300 opacity-30 blur-3xl" />
-          <div className="relative z-10 mx-auto max-w-xs text-center">
-            <h1 className="font-display text-4xl font-extrabold tracking-tight text-sky-500">CASIGURO</h1>
-            <p className="mt-1 text-lg font-bold tracking-widest text-slate-800">ENTERPRISES, INC.</p>
-            <div className="mx-auto mt-5 flex h-1.5 w-24 overflow-hidden rounded-full">
-              <span className="flex-1 bg-sky-500" />
-              <span className="flex-1 bg-pink-600" />
-              <span className="flex-1 bg-yellow-400" />
-              <span className="flex-1 bg-slate-900" />
-            </div>
-            <p className="mt-6 text-sm text-slate-500">Your trusted partner for quality printing and customized solutions.</p>
+    <div className="login-page">
+      <div className="login-shell">
+
+      {/* LEFT BRANDING PANEL */}
+      <section className="login-brand-panel">
+         <img src="TopBladeCasiguro.svg" alt="CASIguro Printing Services" className="casiguro-brandblade" />
+         <img src="BottomDesignCasiguro.svg" alt="CASIguro Printing Services" className="casiguro-brandblade2" />
+
+        <div className="brand-content">
+
+          <div className="logo-container">
+            <div
+              className="casiguro-logo"
+            />
           </div>
+
+         
+
+          <div className="brand-line">
+            <span className="cyan"></span>
+            <span className="pink"></span>
+            <span className="yellow"></span>
+            <span className="black"></span>
+          </div>
+
+          <p>
+            Your trusted partner for quality printing
+            <br />
+            and customized solutions.
+          </p>
+
         </div>
+      </section>
 
-        {/* Right form panel */}
-        <div className="w-full px-6 py-10 sm:px-12 sm:py-14 md:w-1/2">
-          <h2 className="font-display text-3xl font-extrabold text-slate-900">
-            Welcome <span className={GRADIENT_TEXT}>Back!</span>
-          </h2>
-          <p className="mt-2 text-sm text-slate-500">Sign in to continue to your account</p>
 
-          <form className="mt-8 space-y-5" onSubmit={submit}>
-            <Field label="Username / Email">
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input className={cn(inputClass, "pl-10")} placeholder="Enter your username or email" defaultValue="admin@casiguro.ph" />
+      {/* RIGHT LOGIN PANEL */}
+      <section className="login-form-panel">
+
+        <div className="login-container">
+
+          <div className="login-heading">
+            <h1>
+              Welcome <span>Back!</span>
+            </h1>
+
+            <p>
+              Sign in to continue to your account
+            </p>
+          </div>
+
+
+          <form className="login-form">
+
+            {/* USERNAME */}
+            <div className="form-group">
+
+              <label htmlFor="username">
+                Username / Email
+              </label>
+
+              <div className="input-wrapper">
+
+                <span className="input-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+                  </svg>
+                </span>
+
+                <input
+                  type="text"
+                  id="username"
+                  placeholder="Enter your username or email"
+                />
+
               </div>
-            </Field>
 
-            <Field label="Password">
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+
+
+            {/* PASSWORD */}
+            <div className="form-group">
+
+              <label htmlFor="password">
+                Password
+              </label>
+
+              <div className="input-wrapper">
+
+                <span className="input-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <rect
+                      x="5"
+                      y="10"
+                      width="14"
+                      height="10"
+                      rx="2"
+                    />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                  </svg>
+                </span>
+
                 <input
                   type={showPassword ? "text" : "password"}
-                  className={cn(inputClass, "pl-10 pr-10")}
+                  id="password"
                   placeholder="Enter your password"
-                  defaultValue="••••••••"
                 />
+
                 <button
                   type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label="Toggle password visibility"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <path d="M3 3l18 18" />
+                      <path d="M10.5 10.5a2 2 0 0 0 3 3" />
+                      <path d="M9.9 4.2A10.7 10.7 0 0 1 12 4c5 0 8.5 4 9.5 6a15.7 15.7 0 0 1-3.1 3.7" />
+                      <path d="M6.6 6.6C4.5 8 3.3 9.7 2.5 10.5c1 2 4.5 6 9.5 6 1 0 2-.2 2.9-.5" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                      <circle cx="12" cy="12" r="2.5" />
+                    </svg>
+                  )}
                 </button>
-              </div>
-            </Field>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-slate-600">
-                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-pink-600 focus:ring-pink-400" />
-                Remember me
-              </label>
-              <a href="#" onClick={(e) => e.preventDefault()} className="font-semibold text-sky-600 hover:text-sky-700">
-                Forgot Password?
-              </a>
+              </div>
+
             </div>
 
-            <Button type="submit" onClick={onLogin} className="w-full" size="lg">
-              <Lock className="h-4 w-4" /> Sign In
-            </Button>
 
-            <p className="text-center text-xs text-slate-400">Prototype demo — click Sign In with any credentials.</p>
+            {/* OPTIONS */}
+            <div className="login-options">
+
+              <label className="remember-me">
+                <input type="checkbox" />
+                <span>Remember me</span>
+              </label>
+
+              <button
+                type="button"
+                className="forgot-password"
+              >
+                Forgot Password?
+              </button>
+
+            </div>
+
+
+            {/* SIGN IN */}
+            <button
+              type="submit"
+              className="sign-in-button"
+              onClick={onLogin}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <rect
+                  x="5"
+                  y="10"
+                  width="14"
+                  height="10"
+                  rx="2"
+                />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </svg>
+
+              Sign In
+            </button>
+
           </form>
 
-          <p className="mt-10 text-center text-xs text-slate-400">© 2026 CASIGURO Enterprises Inc. All rights reserved.</p>
+
+          {/* DIVIDER */}
+          <div className="divider">
+            
+          </div>
+
+
+         
+
+
+          <footer className="login-footer">
+            © 2026 CASIGURO Enterprises Inc. All rights reserved.
+          </footer>
+
         </div>
+
+      </section>
       </div>
     </div>
   );

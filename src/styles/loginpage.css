@@ -1,0 +1,974 @@
+/* ========================================
+   GLOBAL
+======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+.login-page {
+  min-height: 100vh;
+  width: 100%;
+  padding: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    linear-gradient(135deg, #f4f6fb 0%, #f8f9ff 45%, #fff7fb 100%);
+
+  font-family: "Roboto", Arial, sans-serif;
+
+}
+
+.login-shell {
+  width: min(1120px, 100%);
+  min-height: 720px;
+
+  display: flex;
+  overflow: hidden;
+
+  border-radius: 30px;
+  border: 1px solid rgba(23, 33, 63, 0.08);
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+}
+
+.login-brand-panel {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 100%;
+
+  overflow: hidden;
+
+  background: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-right: 1px solid rgba(23, 33, 63, 0.08);
+}
+
+
+/* ========================================
+   LEFT BRANDING PANEL
+======================================== */
+
+.casiguro-brandblade{
+    position: absolute;
+    top: -20px;
+    left: 0px;;
+    width: 100%;
+    height: 100%;
+}
+
+.casiguro-brandblade2
+{
+    position: absolute;
+    bottom: -200px;
+    right: -200px;
+    width: 100%;
+    height: 100%;
+}
+
+/* Decorative blade shapes removed — not used by the current JSX markup. */
+
+
+/* ========================================
+   LOWER RIGHT DECORATIVE BLADES
+======================================== */
+
+/*
+   The four main elements above create the
+   upper-left sweep.
+
+   We use pseudo-elements on the branding
+   panel to create the lower-right sweep
+   visible in the reference design.
+*/
+
+
+
+
+/* ========================================
+   LOWER RIGHT CYAN BLADE
+
+
+
+/* ========================================
+   DOT PATTERN
+======================================== */
+
+/*
+   The screenshot has a subtle halftone/dot
+   pattern behind the logo.
+
+   Instead of covering the entire panel,
+   place it mostly around the right side
+   of the branding area.
+*/
+
+.login-brand-panel .brand-content::before {
+  content: "";
+
+  position: absolute;
+
+  width: 420px;
+  height: 500px;
+
+  top: -140px;
+  right: -260px;
+
+  background-image:
+    radial-gradient(
+      circle,
+      rgba(220, 193, 193, 0.48) 1.4px,
+      transparent 1.5px
+    );
+
+  background-size: 14px 14px;
+
+  opacity: 0.55;
+
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+.login-brand-panel .brand-content::after {
+  content: "";
+
+  position: absolute;
+
+  width: 320px;
+  height: 320px;
+
+  bottom: -110px;
+  left: -140px;
+
+  background-image:
+    radial-gradient(
+      circle,
+       rgba(220, 193, 193, 0.48) 1.4px,
+      transparent 1.3px
+    );
+
+  background-size: 16px 16px;
+
+  opacity: 0.6;
+
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+
+/* ========================================
+   BRAND CONTENT
+======================================== */
+
+.brand-content {
+  position: relative;
+
+  z-index: 5;
+
+  text-align: center;
+
+  padding: 20px 40px;
+}
+
+
+/* ========================================
+   LOGO
+======================================== */
+
+.logo-container {
+   display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+}
+
+.casiguro-logo {
+  width: 400px;
+  max-width: 50vw;
+  height: 200px;
+
+  background-image: url("CasiguroEnterpriseLogo.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  display: block;
+}
+
+
+/* ========================================
+   BRAND NAME
+======================================== */
+
+.brand-content h1 {
+  margin: 0;
+
+  font-size: 46px;
+
+  font-weight: 800;
+
+  letter-spacing: -2px;
+
+  color: #080808;
+}
+
+
+.brand-content h1 span {
+  color: #ec008c;
+}
+
+
+.brand-content h2 {
+  margin: 2px 0 20px;
+
+  font-size: 25px;
+
+  font-weight: 500;
+
+  color: #18213d;
+}
+
+
+/* ========================================
+   COLOR LINE
+======================================== */
+
+.brand-line {
+  display: flex;
+
+  width: 120px;
+  height: 4px;
+
+  margin: 0 auto 25px;
+
+  border-radius: 10px;
+
+  overflow: hidden;
+}
+
+
+.brand-line span {
+  flex: 1;
+}
+
+
+.brand-line .cyan {
+  background: #00a9e8;
+}
+
+
+.brand-line .pink {
+  background: #ec008c;
+}
+
+
+.brand-line .yellow {
+  background: #ffd600;
+}
+
+
+.brand-line .black {
+  background: #000000;
+}
+
+
+.brand-content p {
+  color: #5d6680;
+
+  font-size: 16px;
+
+  line-height: 1.7;
+
+  margin: 0;
+}
+
+
+/* ========================================
+   RIGHT LOGIN PANEL
+======================================== */
+
+.login-form-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #ffffff;
+
+  padding: 50px;
+}
+
+
+.login-container {
+  width: 100%;
+
+  max-width: 520px;
+}
+
+
+/* ========================================
+   HEADING
+======================================== */
+
+.login-heading {
+  margin-bottom: 40px;
+}
+
+
+.login-heading h1 {
+  margin: 0 0 8px;
+
+  font-size: clamp(32px, 3vw, 42px);
+
+  font-weight: 750;
+
+  letter-spacing: -1.5px;
+
+  color: #17213f;
+}
+
+
+.login-heading h1 span {
+  color: #ec008c;
+}
+
+
+.login-heading p {
+  margin: 0;
+
+  color: #6b7388;
+
+  font-size: 16px;
+}
+
+
+/* ========================================
+   FORM
+======================================== */
+
+.login-form {
+  width: 100%;
+}
+
+
+.form-group {
+  margin-bottom: 23px;
+}
+
+
+.form-group label {
+  display: block;
+
+  margin-bottom: 9px;
+
+  font-size: 14px;
+
+  font-weight: 650;
+
+  color: #17213f;
+}
+
+
+.input-wrapper {
+  position: relative;
+
+  width: 100%;
+}
+
+
+.input-wrapper input {
+  width: 100%;
+
+  height: 58px;
+
+  padding: 0 50px;
+
+  border: 1px solid #d9dce5;
+
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #ffffff;
+
+  font-size: 15px;
+
+  color: #17213f;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.input-wrapper input::placeholder {
+  color: #9aa1b2;
+}
+
+
+.input-wrapper input:focus {
+  border-color: #ec008c;
+
+  box-shadow:
+    0 0 0 3px rgba(236, 0, 140, 0.08);
+}
+
+
+/* ========================================
+   INPUT ICON
+======================================== */
+
+.input-icon {
+  position: absolute;
+
+  left: 17px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 21px;
+  height: 21px;
+
+  color: #7e879b;
+
+  pointer-events: none;
+}
+
+
+.input-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ========================================
+   PASSWORD TOGGLE
+======================================== */
+
+.password-toggle {
+  position: absolute;
+
+  right: 15px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  border: none;
+
+  background: transparent;
+
+  padding: 5px;
+
+  cursor: pointer;
+
+  color: #7e879b;
+}
+
+
+.password-toggle:hover {
+  color: #17213f;
+}
+
+
+.password-toggle svg {
+  width: 21px;
+  height: 21px;
+}
+
+
+/* ========================================
+   OPTIONS
+======================================== */
+
+.login-options {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin: 5px 0 28px;
+
+  font-size: 14px;
+}
+
+
+.remember-me {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  color: #5d6680;
+
+  cursor: pointer;
+}
+
+
+.remember-me input {
+  width: 17px;
+  height: 17px;
+
+  accent-color: #ec008c;
+
+  cursor: pointer;
+}
+
+
+.forgot-password {
+  border: none;
+
+  background: transparent;
+
+  color: #087cff;
+
+  font-size: 14px;
+
+  cursor: pointer;
+
+  padding: 0;
+
+  transition: color 0.2s ease;
+}
+
+
+.forgot-password:hover {
+  color: #ec008c;
+}
+
+
+/* ========================================
+   SIGN IN BUTTON
+======================================== */
+
+.sign-in-button {
+  width: 100%;
+
+  height: 58px;
+
+  border: none;
+
+  border-radius: 9px;
+
+  cursor: pointer;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  color: #ffffff;
+
+  font-size: 16px;
+
+  font-weight: 650;
+
+  background:
+    linear-gradient(
+      90deg,
+      #ec008c 0%,
+      #c829b6 45%,
+      #00a9e8 100%
+    );
+
+  box-shadow:
+    0 8px 20px rgba(236, 0, 140, 0.16);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.sign-in-button:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 10px 25px rgba(236, 0, 140, 0.22);
+}
+
+
+.sign-in-button:active {
+  transform: translateY(0);
+}
+
+
+.sign-in-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+
+/* ========================================
+   DIVIDER
+======================================== */
+
+.divider {
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  margin: 27px 0;
+}
+
+
+.divider span {
+  height: 1px;
+
+  flex: 1;
+
+  background: #e4e6ec;
+}
+
+
+.divider p {
+  margin: 0;
+
+  color: #8a91a3;
+
+  font-size: 14px;
+}
+
+
+/* Guest button removed — not present in JSX markup. */
+
+
+/* ========================================
+   FOOTER
+======================================== */
+
+.login-footer {
+  margin-top: 55px;
+
+  text-align: center;
+
+  color: #8b91a2;
+
+  font-size: 13px;
+}
+
+
+/* ========================================
+   TABLET
+======================================== */
+
+@media (max-width: 1000px) {
+
+  .login-page {
+    padding: 20px;
+  }
+
+  .login-shell {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+
+   .casiguro-brandblade,
+  .casiguro-brandblade2 {
+    display: none;
+  }
+  /* ------------------------------
+     BRANDING
+  ------------------------------ */
+
+  .login-brand-panel {
+    width: 100%;
+    min-height: 390px;
+    flex-shrink: 0;
+  }
+
+
+  /*
+     Reposition the decorative blades
+     when the panel becomes horizontal.
+  */
+
+  
+
+  .brand-content {
+    padding: 25px;
+  }
+
+
+  .casiguro-logo {
+    width: 300px;
+  }
+
+
+  .brand-content h1 {
+    font-size: 36px;
+  }
+
+
+  .brand-content h2 {
+    font-size: 20px;
+  }
+
+
+  .brand-content p {
+    font-size: 14px;
+  }
+
+
+  /* ------------------------------
+     LOGIN PANEL
+  ------------------------------ */
+
+  .login-form-panel {
+    width: 100%;
+
+    min-height: 62vh;
+
+    padding: 50px 30px;
+  }
+
+}
+
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 600px) {
+
+  .login-page {
+    padding: 12px;
+  }
+
+  .casiguro-brandblade,
+  .casiguro-brandblade2 {
+    display: none;
+  }
+
+  .login-shell {
+    border-radius: 22px;
+    overflow: visible;
+  }
+
+  .login-brand-panel {
+    min-height: 280px;
+    padding: 22px 16px 18px;
+  }
+
+
+  /* ------------------------------
+     Smaller decorative blades
+  ------------------------------ */
+
+ 
+
+
+  .login-brand-panel::before {
+    width: 600px;
+
+    height: 150px;
+
+    right: -430px;
+
+    bottom: -30px;
+  }
+
+
+  .login-brand-panel::after {
+    width: 650px;
+
+    height: 130px;
+
+    right: -450px;
+
+    bottom: 0;
+  }
+
+
+  /* ------------------------------
+     Brand content
+  ------------------------------ */
+
+  .brand-content {
+    width: 100%;
+    padding: 18px 14px;
+    border-radius: 20px;
+    transform: none;
+  }
+
+  .casiguro-logo {
+    width: 400px;
+    height: 100px;
+    max-width: 38vw;
+  }
+
+  .brand-content h1 {
+    font-size: 26px;
+    letter-spacing: -1px;
+  }
+
+  .brand-content h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .brand-content p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .brand-line {
+    width: 90px;
+    margin-bottom: 14px;
+  }
+
+
+  /* ------------------------------
+     Login panel
+  ------------------------------ */
+
+  .login-form-panel {
+    padding: 24px 18px 28px;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
+
+  .login-heading {
+    margin-bottom: 22px;
+  }
+
+  .login-heading h1 {
+    font-size: 26px;
+  }
+
+
+  .login-heading p {
+    font-size: 14px;
+  }
+
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .input-wrapper input {
+    height: 50px;
+    font-size: 14px;
+  }
+
+  .login-options {
+    font-size: 13px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+
+  .forgot-password {
+    font-size: 13px;
+  }
+
+
+  .sign-in-button {
+    height: 52px;
+  }
+
+  .guest-button {
+    height: 52px;
+    font-size: 14px;
+  }
+
+  .login-footer {
+    margin-top: 28px;
+    font-size: 12px;
+  }
+
+}
+
+
+/* ========================================
+   VERY SMALL PHONES
+======================================== */
+
+@media (max-width: 380px) {
+
+  .login-brand-panel {
+    min-height: 260px;
+    padding: 18px 12px 14px;
+  }
+
+
+  .casiguro-logo {
+    width: 300px;
+  }
+
+
+  .brand-content h1 {
+    font-size: 27px;
+  }
+
+
+  .brand-content h2 {
+    font-size: 16px;
+  }
+
+
+  .brand-content p {
+    font-size: 12px;
+  }
+
+
+  .login-form-panel {
+    padding: 20px 14px 24px;
+  }
+
+
+  .login-heading h1 {
+    font-size: 27px;
+  }
+
+
+  .login-options {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 12px;
+  }
+
+
+  .forgot-password {
+    align-self: flex-end;
+  }
+
+  .casiguro-brandblade,
+  .casiguro-brandblade2 {
+    display: none;
+  }
+
+}
