@@ -2,7 +2,23 @@ export type OrderType = "custom" | "stock";
 export type OrderStatus = "pending" | "in_production" | "ready" | "completed";
 export type PaymentStatusKey = "unpaid" | "partial" | "paid";
 export type NotificationType = "new_order" | "status_update" | "detail_update";
-export type PageKey = "dashboard" | "orders" | "production" | "completed" | "statistics" | "notifications";
+export type PageKey = "dashboard" | "orders" | "production" | "completed" | "customers" | "statistics" | "notifications";
+export type CustomerPaymentFilter = "all" | "unpaid" | "partial" | "paid";
+
+export interface CustomerSummary {
+  name: string;
+  contactNumber: string;
+  totalOrders: number;
+  activeOrders: number;
+  completedOrders: number;
+  totalSpent: number;
+  totalPaid: number;
+  totalBalance: number;
+  hasUnpaid: boolean;
+  standing: "good" | "unpaid";
+  orders: Order[];
+  lastOrderDate: string;
+}
 
 /**
  * Canonical Order record. This shape is intentionally flat so it can be

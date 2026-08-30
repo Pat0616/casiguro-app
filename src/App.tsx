@@ -10,6 +10,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import OrderManagementPage from "@/pages/OrderManagementPage";
 import ProductionMonitoringPage from "@/pages/ProductionMonitoringPage";
 import CompletedTransactionsPage from "@/pages/CompletedTransactionsPage";
+import CustomerOverviewPage from "@/pages/CustomerOverviewPage";
 import StatisticsPage from "@/pages/StatisticsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 
@@ -119,6 +120,7 @@ export default function App() {
         {active === "orders" && <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
         {active === "production" && <ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
         {active === "completed" && <CompletedTransactionsPage orders={orders} />}
+        {active === "customers" && <CustomerOverviewPage orders={orders} />}
         {active === "statistics" && <StatisticsPage orders={orders} />}
         {active === "notifications" && <NotificationsPage notifications={notifications} />}
       </AppShell>

@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, ClipboardList, Factory, CheckCircle2, BarChart3, Bell,
+  LayoutDashboard, ClipboardList, Factory, CheckCircle2, Users, BarChart3, Bell,
 } from "lucide-react";
 import type { OrderStatus, PageKey, PaymentStatusKey } from "@/types";
 
@@ -16,6 +16,7 @@ export const NAV_ITEMS: { key: PageKey; label: string; icon: typeof LayoutDashbo
   { key: "orders", label: "Order Management", icon: ClipboardList },
   { key: "production", label: "Production Monitoring", icon: Factory },
   { key: "completed", label: "Completed Transactions", icon: CheckCircle2 },
+  { key: "customers", label: "Customer Overview", icon: Users },
   { key: "statistics", label: "Statistics", icon: BarChart3 },
   { key: "notifications", label: "Notifications", icon: Bell },
 ];
