@@ -10,6 +10,8 @@ import {
   Users,
   Wallet,
   X,
+  ArrowLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
@@ -36,6 +38,7 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<CustomerPaymentFilter>("all");
   const [selectedCustomerName, setSelectedCustomerName] = useState<string | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   // Derive unique customer summaries from orders
   const customers = useMemo(() => {
@@ -131,6 +134,15 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
     return filteredCustomers[0];
   }, [filteredCustomers, selectedCustomerName]);
 
+  const handleSelectCustomer = (name: string) => {
+    setSelectedCustomerName(name);
+    setMobileDetailOpen(true);
+    // Smooth scroll to top on mobile for instant visibility
+    if (window.innerWidth < 1024) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const overviewCards = [
     {
       label: "Total Customers",
@@ -162,8 +174,8 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
     <div className="space-y-6">
       <SectionHeading eyebrow="Directory & Credit Standing" title="Customer Overview" />
 
-      {/* Top Metrics Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Top Metrics Row - Hidden on mobile if detail is open for cleaner viewing */}
+      <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4", mobileDetailOpen ? "hidden lg:grid" : "grid")}>
         {overviewCards.map((c) => (
           <Card key={c.label} className="p-5">
             <div className={cn("mb-3 flex h-10 w-10 items-center justify-center rounded-xl", c.tint)}>
@@ -175,8 +187,8 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
         ))}
       </div>
 
-      {/* Search & Filter Bar */}
-      <Card className="p-4">
+      {/* Search & Filter Bar - Hidden on mobile if detail is open for cleaner focus */}
+      <Card className={cn("p-4", mobileDetailOpen ? "hidden lg:block" : "block")}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-md">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -185,7 +197,10 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
               className={cn(inputClass, "pl-10 pr-9")}
               placeholder="Search customer name or contact number..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setMobileDetailOpen(false);
+              }}
             />
             {searchQuery && (
               <button
@@ -200,7 +215,10 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
             {FILTERS.map((f) => (
               <button
                 key={f.key}
-                onClick={() => setFilter(f.key)}
+                onClick={() => {
+                  setFilter(f.key);
+                  setMobileDetailOpen(false);
+                }}
                 className={cn(
                   "rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
                   filter === f.key
@@ -227,14 +245,20 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
           {/* Customer Master List (Left Column) */}
-          <div className="space-y-3 lg:col-span-4 xl:col-span-4">
+          <div
+            className={cn(
+              "space-y-3 lg:col-span-4 xl:col-span-4",
+              mobileDetailOpen ? "hidden lg:block" : "block"
+            )}
+          >
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Customers ({filteredCustomers.length})
               </span>
+              <span className="text-xs text-slate-400 lg:hidden">Tap to view full details</span>
             </div>
 
-            <div className="max-h-[calc(100vh-280px)] space-y-2.5 overflow-y-auto pr-1">
+            <div className="space-y-2.5 lg:max-h-[calc(100vh-280px)] lg:overflow-y-auto lg:pr-1">
               {filteredCustomers.map((cust) => {
                 const isSelected = selectedCustomer?.name === cust.name;
                 const isGoodStanding = cust.standing === "good";
@@ -242,9 +266,9 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
                 return (
                   <button
                     key={cust.name}
-                    onClick={() => setSelectedCustomerName(cust.name)}
+                    onClick={() => handleSelectCustomer(cust.name)}
                     className={cn(
-                      "w-full rounded-2xl border p-4 text-left transition-all duration-150",
+                      "group w-full rounded-2xl border p-4 text-left transition-all duration-150",
                       isSelected
                         ? "border-pink-300 bg-gradient-to-r from-pink-50/70 to-sky-50/70 shadow-sm ring-2 ring-pink-200/60"
                         : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/70"
@@ -254,10 +278,13 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
                       <div className="flex min-w-0 items-center gap-3">
                         <Avatar name={cust.name} size="md" />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-900">{cust.name}</p>
+                          <p className="truncate text-sm font-bold text-slate-900 group-hover:text-pink-600 transition-colors">
+                            {cust.name}
+                          </p>
                           <p className="truncate text-xs text-slate-500">{cust.contactNumber}</p>
                         </div>
                       </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-pink-500 lg:hidden" />
                     </div>
 
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100/80 pt-2.5">
@@ -285,9 +312,28 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
           </div>
 
           {/* Customer Profile & Transaction Ledger Detail (Right Column) */}
-          <div className="space-y-6 lg:col-span-8 xl:col-span-8">
+          <div
+            className={cn(
+              "space-y-6 lg:col-span-8 xl:col-span-8",
+              mobileDetailOpen ? "block" : "hidden lg:block"
+            )}
+          >
             {selectedCustomer && (
               <>
+                {/* Mobile Back Button Navigation */}
+                <div className="flex items-center justify-between lg:hidden">
+                  <button
+                    onClick={() => setMobileDetailOpen(false)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-pink-600 active:scale-95"
+                  >
+                    <ArrowLeft className="h-4 w-4 text-slate-500" />
+                    Back to Customer List
+                  </button>
+                  <span className="text-xs font-semibold text-slate-400">
+                    Customer Profile
+                  </span>
+                </div>
+
                 {/* Customer Identity Card & Standing Banner */}
                 <Card className="p-6">
                   <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -491,4 +537,3 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
     </div>
   );
 }
-

@@ -52,6 +52,7 @@ const RAW_ORDERS: RawOrder[] = [
   { customerName: "Rico Fernandez", contactNumber: "0928 551 0092", product: "Custom Tote Bags", category: "Merchandise", orderType: "custom", quantity: 80, quantityCompleted: 80, unitPrice: 140, amountPaid: 11200, status: "completed", notes: "Eco-bag campaign.", dateOrdered: "2026-02-14", dueDate: "2026-02-28", dateCompleted: "2026-03-01" },
   { customerName: "Josephine Garcia", contactNumber: "0917 552 8810", product: "Custom T-Shirts", category: "Apparel", orderType: "custom", quantity: 90, quantityCompleted: 90, unitPrice: 200, amountPaid: 18000, status: "completed", notes: "Fiesta committee shirts.", dateOrdered: "2025-12-02", dueDate: "2025-12-15", dateCompleted: "2025-12-14" },
   { customerName: "Danilo Cruz", contactNumber: "0919 664 9021", product: "Tarpaulin", category: "Signage", orderType: "custom", quantity: 3, quantityCompleted: 3, unitPrice: 880, amountPaid: 2640, status: "completed", notes: "Year-end sale tarp.", dateOrdered: "2025-11-18", dueDate: "2025-12-01", dateCompleted: "2025-11-30" },
+  { customerName: "Josephine Garcia", contactNumber: "0917 552 8810", product: "Custom T-Shirts School", category: "Apparel", orderType: "custom", quantity: 90, quantityCompleted: 90, unitPrice: 200, amountPaid: 18000, status: "completed", notes: "Fiesta committee shirts.", dateOrdered: "2025-11-15", dueDate: "2025-12-01", dateCompleted: "2025-11-28" },
 ];
 
 export const MOCK_ORDERS: Order[] = RAW_ORDERS.map((o, i) => {
