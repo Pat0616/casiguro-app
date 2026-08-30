@@ -103,7 +103,9 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <span className={cn("text-xs font-semibold", due.tone)}>{due.text}</span>
+                  <span className={cn("rounded-md px-2 py-0.5 text-[11px] font-black uppercase tracking-tight", due.badge)}>
+                    {due.text}
+                  </span>
                   <Badge config={pcfg} label={pcfg.label} />
                 </div>
               </button>

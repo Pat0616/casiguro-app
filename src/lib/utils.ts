@@ -27,13 +27,69 @@ export function daysDiff(iso: string): number {
   return Math.round((target.getTime() - start.getTime()) / 86400000);
 }
 
-export function dueLabel(iso: string): { text: string; tone: string } {
+export interface DueLabelInfo {
+  text: string;
+  badge: string;
+  tone: string;
+  urgency: "overdue" | "today" | "tomorrow" | "soon" | "upcoming" | "normal";
+  daysDiff: number;
+}
+
+export function dueLabel(iso: string): DueLabelInfo {
   const diff = daysDiff(iso);
-  if (diff < 0) return { text: `${Math.abs(diff)}d overdue`, tone: "text-rose-600" };
-  if (diff === 0) return { text: "Due today", tone: "text-amber-600" };
-  if (diff === 1) return { text: "Due tomorrow", tone: "text-amber-600" };
-  if (diff <= 7) return { text: `Due in ${diff}d`, tone: "text-slate-600" };
-  return { text: `Due ${formatDate(iso)}`, tone: "text-slate-500" };
+  if (diff < 0) {
+    const days = Math.abs(diff);
+    return {
+      text: `${days}d OVERDUE`,
+      badge: "bg-rose-600 text-white font-extrabold shadow-sm shadow-rose-200",
+      tone: "text-rose-600 font-extrabold",
+      urgency: "overdue",
+      daysDiff: diff,
+    };
+  }
+  if (diff === 0) {
+    return {
+      text: "DUE TODAY",
+      badge: "bg-amber-500 text-white font-extrabold shadow-sm shadow-amber-200",
+      tone: "text-amber-600 font-extrabold",
+      urgency: "today",
+      daysDiff: diff,
+    };
+  }
+  if (diff === 1) {
+    return {
+      text: "DUE TOMORROW",
+      badge: "bg-orange-500 text-white font-bold shadow-sm shadow-orange-100",
+      tone: "text-orange-600 font-bold",
+      urgency: "tomorrow",
+      daysDiff: diff,
+    };
+  }
+  if (diff <= 3) {
+    return {
+      text: `Due in ${diff}d`,
+      badge: "bg-amber-100 text-amber-900 border border-amber-300 font-bold",
+      tone: "text-amber-700 font-bold",
+      urgency: "soon",
+      daysDiff: diff,
+    };
+  }
+  if (diff <= 7) {
+    return {
+      text: `Due in ${diff}d`,
+      badge: "bg-sky-100 text-sky-900 border border-sky-200 font-semibold",
+      tone: "text-sky-700 font-semibold",
+      urgency: "upcoming",
+      daysDiff: diff,
+    };
+  }
+  return {
+    text: `Due ${formatDate(iso)}`,
+    badge: "bg-slate-100 text-slate-700 border border-slate-200",
+    tone: "text-slate-600",
+    urgency: "normal",
+    daysDiff: diff,
+  };
 }
 
 export function relativeTime(date: Date): string {
