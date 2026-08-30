@@ -29,11 +29,15 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
       />
 
       {/* Mobile: Calendar on top (order-1), Deadlines below (order-2)
+          Desktop (lg): Deadlines on left 70% (order-1), Calendar on right 30% (order-2) */}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="order-2 w-full lg:order-1 lg:w-[68%] xl:w-[70%]">
           <DeadlinePanel orders={orders} selectedDate={selectedDate} onClear={() => setSelectedDate(null)} />
+        </div>
         <div className="order-1 w-full lg:order-2 lg:w-[32%] xl:w-[30%]">
           <MiniCalendar orders={orders} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
         </div>
+      </div>
 
       <NewOrderModal
         open={modalOpen}
