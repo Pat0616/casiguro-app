@@ -21,7 +21,7 @@ export default function AppShell({ active, onNavigate, unreadCount, onLogout, ch
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Desktop fixed sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-100 bg-white md:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white md:block">
         <Sidebar active={active} onNavigate={onNavigate} unreadCount={unreadCount} onLogout={onLogout} />
       </aside>
 
@@ -48,7 +48,7 @@ export default function AppShell({ active, onNavigate, unreadCount, onLogout, ch
 
       <div className="md:pl-64">
         {/* Header */}
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-100 bg-white/90 px-4 py-3.5 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-4 py-3.5 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 md:hidden">
               <Menu className="h-5 w-5" />

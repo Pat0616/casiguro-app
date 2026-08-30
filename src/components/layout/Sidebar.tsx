@@ -29,8 +29,8 @@ export default function Sidebar({ active, onNavigate, unreadCount, onLogout }: S
               className={cn(
                 "flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-150",
                 isActive
-                  ? "border border-pink-100 bg-gradient-to-r from-pink-50 to-sky-50 text-pink-700 shadow-sm"
-                  : "border border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  ? "bg-gradient-to-r from-pink-50 to-sky-50 text-pink-700 shadow-sm"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
               <span className="flex items-center gap-3">
@@ -44,7 +44,7 @@ export default function Sidebar({ active, onNavigate, unreadCount, onLogout }: S
           );
         })}
       </nav>
-      <div className="border-t border-slate-100 p-4">
+      <div className="border-t border-slate-200 p-4">
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
           <Avatar name="Admin User" size="sm" />
           <div className="min-w-0 flex-1">

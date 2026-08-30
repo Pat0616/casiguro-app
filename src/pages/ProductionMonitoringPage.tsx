@@ -77,7 +77,7 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
               <button
                 key={o.id}
                 onClick={() => setSelected(o)}
-                className="rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2.5">
