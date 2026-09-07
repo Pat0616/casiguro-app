@@ -1,14 +1,38 @@
 import { FormEvent, useState } from "react";
 import '../styles/loginpage.css';
+import {useNavigate} from "react-router-dom";
+import { useAuth } from "../context/AuthenticationContext";
+import {login, getMe} from "../utils/authAPI";
 
-export default function LoginPage({ onLogin }: { onLogin: () => void }) {
+export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const dotStyle = { backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)", backgroundSize: "18px 18px" };
+  const navigate = useNavigate();
+  const { setUser } = useAuth();
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    onLogin();
-  };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+
+  const EnterLogin = async() =>{
+      try{
+        await login(email, password);
+
+        const currentUser = await getMe();
+        setUser(currentUser);
+
+        console.log('Logged in user: ', currentUser.email);
+
+        //if the user is admin then dashboard, if employee then order management
+        navigate('/dashboard');
+      }
+      catch(err)
+      {
+         console.log("Login failed", err);
+      }
+  }
+
+
 
   return (
     <div className="login-page">
@@ -62,7 +86,7 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
           </div>
 
 
-          <form className="login-form">
+          <div className="login-form">
 
             {/* USERNAME */}
             <div className="form-group">
@@ -86,6 +110,8 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
                 </span>
 
                 <input
+                  onChange={(e) => setEmail(e.target.value)}
+                  value={email}
                   type="text"
                   id="username"
                   placeholder="Enter your username or email"
@@ -124,6 +150,8 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
                 </span>
 
                 <input
+                  onChange={(e) => setPassword(e.target.value)}
+                  value ={password}
                   type={showPassword ? "text" : "password"}
                   id="password"
                   placeholder="Enter your password"
@@ -187,7 +215,7 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
             <button
               type="submit"
               className="sign-in-button"
-              onClick={onLogin}
+              onClick={EnterLogin}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -208,7 +236,7 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
               Sign In
             </button>
 
-          </form>
+          </div>
 
 
           {/* DIVIDER */}

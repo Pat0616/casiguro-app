@@ -10,11 +10,10 @@ interface AppShellProps {
   active: PageKey;
   onNavigate: (key: PageKey) => void;
   unreadCount: number;
-  onLogout: () => void;
   children: ReactNode;
 }
 
-export default function AppShell({ active, onNavigate, unreadCount, onLogout, children }: AppShellProps) {
+export default function AppShell({ active, onNavigate, unreadCount, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pageTitle = NAV_ITEMS.find((n) => n.key === active)?.label || "";
 
@@ -22,7 +21,7 @@ export default function AppShell({ active, onNavigate, unreadCount, onLogout, ch
     <div className="min-h-screen bg-slate-50">
       {/* Desktop fixed sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white md:block">
-        <Sidebar active={active} onNavigate={onNavigate} unreadCount={unreadCount} onLogout={onLogout} />
+        <Sidebar active={active} onNavigate={onNavigate} unreadCount={unreadCount}  />
       </aside>
 
       {/* Mobile off-canvas sidebar */}
@@ -40,7 +39,7 @@ export default function AppShell({ active, onNavigate, unreadCount, onLogout, ch
                 setMobileOpen(false);
               }}
               unreadCount={unreadCount}
-              onLogout={onLogout}
+              // onLogout={}  
             />
           </div>
         </div>

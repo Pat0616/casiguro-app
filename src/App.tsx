@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { MOCK_NOTIFICATIONS, MOCK_ORDERS } from "@/data/mockData";
 import { NOW, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 import { formatCurrency, isoDate } from "@/lib/utils";
 import type { AppNotification, NewOrderFormData, Order, OrderUpdatePayload, PageKey } from "@/types";
 import AppShell from "@/components/layout/AppShell";
@@ -13,9 +15,11 @@ import CompletedTransactionsPage from "@/pages/CompletedTransactionsPage";
 import CustomerOverviewPage from "@/pages/CustomerOverviewPage";
 import StatisticsPage from "@/pages/StatisticsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
+import { AuthProvider } from "./context/AuthenticationContext";
+import ProtectedRoute from "./routes/ProtectedRoutes";
 
 export default function App() {
-  const [isAuthed, setIsAuthed] = useState(false);
+  
   const [active, setActive] = useState<PageKey>("dashboard");
   const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
@@ -107,24 +111,46 @@ export default function App() {
     flashToast(changes.status === "completed" ? "Order marked Complete and moved to Completed Transactions." : "Order updated successfully.");
   };
 
-  if (!isAuthed) {
-    return <LoginPage onLogin={() => setIsAuthed(true)} />;
-  }
+  
 
   const unreadCount = notifications.filter((n) => (NOW.getTime() - n.timestamp.getTime()) / 60000 < 180).length;
 
   return (
-    <>
-      <AppShell active={active} onNavigate={setActive} unreadCount={unreadCount} onLogout={() => setIsAuthed(false)}>
-        {active === "dashboard" && <DashboardPage orders={orders} />}
-        {active === "orders" && <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
-        {active === "production" && <ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
-        {active === "completed" && <CompletedTransactionsPage orders={orders} />}
-        {active === "customers" && <CustomerOverviewPage orders={orders} />}
-        {active === "statistics" && <StatisticsPage orders={orders} />}
-        {active === "notifications" && <NotificationsPage notifications={notifications} />}
-      </AppShell>
-      <Toast message={toast} />
-    </>
+   <Router>
+    <AuthProvider>
+      <Routes>
+            <Route path='/' element={<Navigate to='login'/>}></Route>
+            <Route path='/login' element={<LoginPage/>} />
+
+              <Route element={<ProtectedRoute />}>
+                   <Route element={<AppShell active={active} onNavigate={setActive} unreadCount={unreadCount} >
+
+                     
+                    {active === "dashboard" && <DashboardPage orders={orders} />}
+                    {active === "orders" && <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
+                    {active === "production" && <ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
+                    {active === "completed" && <CompletedTransactionsPage orders={orders} />}
+                    {active === "customers" && <CustomerOverviewPage orders={orders} />}
+                    {active === "statistics" && <StatisticsPage orders={orders} />}
+                    {active === "notifications" && <NotificationsPage notifications={notifications} />}
+                   </AppShell>}></Route>
+                    
+
+              </Route>
+      </Routes>
+    </AuthProvider>
+   </Router>
   );
+
+
+                    {active === "dashboard" && <DashboardPage orders={orders} />}
+                    {active === "orders" && <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
+                    {active === "production" && <ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
+                    {active === "completed" && <CompletedTransactionsPage orders={orders} />}
+                    {active === "customers" && <CustomerOverviewPage orders={orders} />}
+                    {active === "statistics" && <StatisticsPage orders={orders} />}
+                    {active === "notifications" && <NotificationsPage notifications={notifications} />}
+ 
 }
+
+

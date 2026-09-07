@@ -9,10 +9,10 @@ interface SidebarProps {
   active: PageKey;
   onNavigate: (key: PageKey) => void;
   unreadCount: number;
-  onLogout: () => void;
+  
 }
 
-export default function Sidebar({ active, onNavigate, unreadCount, onLogout }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, unreadCount }: SidebarProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 py-6">
@@ -51,7 +51,7 @@ export default function Sidebar({ active, onNavigate, unreadCount, onLogout }: S
             <p className="truncate text-sm font-semibold text-slate-800">Admin User</p>
             <p className="truncate text-xs text-slate-400">Administrator</p>
           </div>
-          <button onClick={onLogout} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-pink-600" title="Log out">
+          <button  className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-pink-600" title="Log out">
             <LogOut className="h-4 w-4" />
           </button>
         </div>
