@@ -53,7 +53,8 @@ export interface AppNotification {
   orderRef: string;
   customerName: string;
   detail: string;
-  timestamp: Date;
+  timestamp: Date | string;
+  readAt?: string | null;
 }
 
 /** Payload collected from the "New Order" modal, before computed fields are added. */

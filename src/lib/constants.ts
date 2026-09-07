@@ -46,9 +46,4 @@ export const PAYMENT_STATUS: Record<PaymentStatusKey, { label: string; badge: st
 export const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const PIE_COLORS = ["#db2777", "#0ea5e9", "#facc15", "#7c3aed", "#10b981", "#f97316"];
 
-/**
- * The prototype pretends "today" is Aug 20, 2026 so the mock data's due
- * dates, deadlines, and relative notification timestamps line up sensibly.
- * Swap this for `new Date()` once the app is wired to live data.
- */
-export const NOW = new Date(2026, 7, 20, 15, 30);
+export const NOW = new Date();

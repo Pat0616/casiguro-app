@@ -64,10 +64,10 @@ export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
       </nav>
       <div className="border-t border-slate-200 p-4">
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-          <Avatar name="Admin User" size="sm" />
+          <Avatar name={user?.full_name || "User"} size="sm" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-800">Admin User</p>
-            <p className="truncate text-xs text-slate-400">Administrator</p>
+            <p className="truncate text-sm font-semibold text-slate-800">{user?.full_name || "Staff"}</p>
+            <p className="truncate text-xs text-slate-400 capitalize">{user?.role || "Employee"}</p>
           </div>
           <button  className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-pink-600" title="Log out"
           onClick={EnterLogout}

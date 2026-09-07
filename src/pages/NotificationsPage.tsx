@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Bell, Clock, Edit3, RefreshCcw, ShoppingBag, LucideIcon } from "lucide-react";
+import { Bell, Clock, Edit3, RefreshCcw, ShoppingBag, CheckCheck, LucideIcon } from "lucide-react";
 import { cn, relativeTime } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
 import EmptyState from "@/components/ui/EmptyState";
+import Button from "@/components/ui/Button";
 
 const NOTIF_ICON: Record<NotificationType, { icon: LucideIcon; tint: string }> = {
   new_order: { icon: ShoppingBag, tint: "text-sky-600 bg-sky-50" },
@@ -20,13 +21,43 @@ const FILTERS: { key: NotificationType | "all"; label: string }[] = [
   { key: "detail_update", label: "Detail Updates" },
 ];
 
-export default function NotificationsPage({ notifications }: { notifications: AppNotification[] }) {
+interface NotificationsPageProps {
+  notifications: AppNotification[];
+  onMarkAllAsRead?: () => void;
+  onMarkAsRead?: (id: string) => void;
+}
+
+export default function NotificationsPage({
+  notifications,
+  onMarkAllAsRead,
+  onMarkAsRead,
+}: NotificationsPageProps) {
   const [filter, setFilter] = useState<NotificationType | "all">("all");
-  const list = notifications.filter((n) => filter === "all" || n.type === filter).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+  const list = notifications
+    .filter((n) => filter === "all" || n.type === filter)
+    .sort((a, b) => {
+      const timeA = new Date(typeof a.timestamp === "string" ? a.timestamp.replace(" ", "T") : a.timestamp).getTime();
+      const timeB = new Date(typeof b.timestamp === "string" ? b.timestamp.replace(" ", "T") : b.timestamp).getTime();
+      return timeB - timeA;
+    });
+
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
     <div className="space-y-6">
-      <SectionHeading eyebrow="Activity Log" title="Notifications" />
+      <SectionHeading
+        eyebrow="Activity Log"
+        title="Notifications"
+        action={
+          unreadCount > 0 && onMarkAllAsRead ? (
+            <Button variant="secondary" onClick={onMarkAllAsRead} className="text-xs">
+              <CheckCheck className="h-4 w-4" /> Mark all as read ({unreadCount})
+            </Button>
+          ) : undefined
+        }
+      />
+
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
@@ -51,15 +82,31 @@ export default function NotificationsPage({ notifications }: { notifications: Ap
           <div className="divide-y divide-slate-100">
             {list.map((n) => {
               const meta = NOTIF_ICON[n.type];
+              const isUnread = !n.readAt;
+
               return (
-                <div key={n.id} className="flex items-start gap-3.5 p-4">
-                  <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", meta.tint)}>
+                <div
+                  key={n.id}
+                  onClick={() => isUnread && onMarkAsRead && onMarkAsRead(n.id)}
+                  className={cn(
+                    "flex items-start gap-3.5 p-4 transition",
+                    isUnread ? "bg-pink-50/20 hover:bg-pink-50/40 cursor-pointer" : "hover:bg-slate-50"
+                  )}
+                >
+                  <div className={cn("relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", meta.tint)}>
                     <meta.icon className="h-5 w-5" />
+                    {isUnread && (
+                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink-600 ring-2 ring-white" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-slate-800">
                       <span className="font-bold">{n.user}</span>{" "}
-                      {n.type === "new_order" ? "created a new order" : n.type === "status_update" ? "updated an order's status" : "updated an order's details"}
+                      {n.type === "new_order"
+                        ? "created a new order"
+                        : n.type === "status_update"
+                        ? "updated an order's status"
+                        : "updated an order's details"}
                     </p>
                     <p className="mt-0.5 text-sm text-slate-600">
                       <span className="font-mono text-xs text-slate-400">{n.orderRef}</span> · {n.customerName} — {n.detail}
@@ -68,6 +115,11 @@ export default function NotificationsPage({ notifications }: { notifications: Ap
                       <Clock className="h-3 w-3" /> {relativeTime(n.timestamp)}
                     </p>
                   </div>
+                  {isUnread && (
+                    <span className="rounded-full bg-pink-100 px-2 py-0.5 text-[10px] font-bold text-pink-700">
+                      New
+                    </span>
+                  )}
                 </div>
               );
             })}

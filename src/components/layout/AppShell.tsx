@@ -5,12 +5,14 @@ import { NAV_ITEMS } from "@/lib/constants";
 import Sidebar from "./Sidebar";
 import Logo from "./Logo";
 import Avatar from "@/components/ui/Avatar";
+import { useAuth } from "@/context/AuthenticationContext";
 
 interface AppShellProps {
   unreadCount: number;
 }
 
 export default function AppShell({ unreadCount }: AppShellProps) {
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
   const pageTitle = NAV_ITEMS.find((item) => `/${item.key}` === pathname)?.label || "";
@@ -55,8 +57,12 @@ export default function AppShell({ unreadCount }: AppShellProps) {
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-pink-600" />}
             </Link>
-            <div className="hidden items-center gap-2 sm:flex">
-              <Avatar name="Admin User" size="sm" />
+            <div className="hidden items-center gap-2.5 sm:flex">
+              <Avatar name={user?.full_name || "User"} size="sm" />
+              <div className="text-left">
+                <p className="text-xs font-bold text-slate-800 leading-tight">{user?.full_name || "Staff"}</p>
+                <p className="text-[10px] text-slate-400 capitalize">{user?.role || "Employee"}</p>
+              </div>
             </div>
           </div>
         </header>

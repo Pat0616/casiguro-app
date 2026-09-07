@@ -12,25 +12,28 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  const EnterLogin = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await login(email, password);
+      const currentUser = await getMe();
+      setUser(currentUser);
+      console.log('Logged in user: ', currentUser.email);
 
-  const EnterLogin = async() =>{
-      try{
-        await login(email, password);
-
-        const currentUser = await getMe();
-        setUser(currentUser);
-
-        console.log('Logged in user: ', currentUser.email);
-
-        //if the user is admin then dashboard, if employee then order management
-        navigate('/dashboard');
-      }
-      catch(err)
-      {
-         console.log("Login failed", err);
-      }
-  }
+      // If admin -> dashboard, if employee -> orders
+      navigate(currentUser?.role === "admin" ? '/dashboard' : '/orders');
+    } catch (err: any) {
+      console.error("Login failed", err);
+      setError(err.message || "Invalid credentials. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 
@@ -87,6 +90,11 @@ export default function LoginPage() {
 
 
           <div className="login-form">
+            {error && (
+              <div style={{ padding: "10px 14px", marginBottom: "16px", borderRadius: "10px", backgroundColor: "#fef2f2", color: "#b91c1c", fontSize: "13px", border: "1px solid #fecaca" }}>
+                {error}
+              </div>
+            )}
 
             {/* USERNAME */}
             <div className="form-group">

@@ -1,10 +1,15 @@
-import { useState } from "react";
-import { MOCK_NOTIFICATIONS, MOCK_ORDERS } from "@/data/mockData";
-import { NOW, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
-import { formatCurrency, isoDate } from "@/lib/utils";
 import type { AppNotification, NewOrderFormData, Order, OrderUpdatePayload } from "@/types";
+import { getOrders, createOrder, updateOrder } from "@/utils/orderAPI";
+import {
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/utils/notificationAPI";
+import { subscribeToNotifications, subscribeToOrders } from "@/utils/socket";
+
 import AppShell from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -14,134 +19,173 @@ import CompletedTransactionsPage from "@/pages/CompletedTransactionsPage";
 import CustomerOverviewPage from "@/pages/CustomerOverviewPage";
 import StatisticsPage from "@/pages/StatisticsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
-import { AuthProvider } from "./context/AuthenticationContext";
+import Toast from "@/components/ui/Toast";
+
+import { AuthProvider, useAuth } from "./context/AuthenticationContext";
 import ProtectedRoute from "./routes/ProtectedRoutes";
 import ProtectedAdminRoute from "./routes/ProtectedAdminRoute";
 
-export default function App() {
-  
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
-  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+function MainApp() {
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [toast, setToast] = useState("");
 
   const flashToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(""), 2600);
+    setTimeout(() => setToast(""), 3500);
   };
 
-  const pushNotification = (entry: Omit<AppNotification, "id" | "timestamp">) => {
-    setNotifications((prev) => [{ id: `note-${Date.now()}-${Math.random()}`, timestamp: new Date(NOW.getTime()), ...entry }, ...prev]);
-  };
+  // Load orders and persistent notifications from database when authenticated
+  useEffect(() => {
+    if (!user) return;
 
-  // --- These two handlers are the seam where real API/DB calls will plug in later. ---
-
-  const handleCreateOrder = (data: NewOrderFormData) => {
-    const isStock = data.orderType === "stock";
-    const totalPrice = data.quantity * data.unitPrice;
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      refNo: `TXN-2026-${String(orders.length + 1).padStart(4, "0")}`,
-      customerName: data.customerName,
-      contactNumber: data.contactNumber,
-      product: data.product,
-      category: data.category,
-      orderType: data.orderType,
-      quantity: data.quantity,
-      quantityCompleted: isStock ? data.quantity : 0,
-      unitPrice: data.unitPrice,
-      totalPrice,
-      amountPaid: isStock ? totalPrice : 0,
-      balance: isStock ? 0 : totalPrice,
-      paymentStatus: isStock ? "paid" : "unpaid",
-      status: isStock ? "completed" : "pending",
-      notes: data.notes,
-      dateOrdered: data.dateOrdered,
-      dueDate: data.dueDate,
-      dateCompleted: isStock ? data.dateOrdered : undefined,
+    const loadData = async () => {
+      try {
+        const [ordersData, notifsData] = await Promise.all([
+          getOrders(),
+          getNotifications(),
+        ]);
+        setOrders(ordersData);
+        setNotifications(notifsData);
+      } catch (err) {
+        console.error("Error loading initial data:", err);
+      }
     };
-    setOrders((prev) => [newOrder, ...prev]);
-    pushNotification({
-      type: "new_order",
-      user: "Admin User",
-      orderRef: newOrder.refNo,
-      customerName: newOrder.customerName,
-      detail: `New ${isStock ? "Stock" : "Custom"} Order created — ${newOrder.product} × ${newOrder.quantity}`,
-    });
-    flashToast(isStock ? "Stock order saved and marked Complete." : "Custom order saved and sent to Production Monitoring.");
-  };
 
-  const handleUpdateOrder = (id: string, changes: OrderUpdatePayload) => {
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id !== id) return o;
-        const totalPrice = changes.quantity * changes.unitPrice;
-        const balance = Math.max(totalPrice - changes.amountPaid, 0);
-        const updated: Order = {
-          ...o,
-          ...changes,
-          totalPrice,
-          balance,
-          dateCompleted: changes.status === "completed" ? o.dateCompleted || isoDate(NOW) : o.dateCompleted,
-        };
+    loadData();
 
-        const diffs: string[] = [];
-        if (o.unitPrice !== changes.unitPrice) diffs.push(`Unit Price changed from ${formatCurrency(o.unitPrice)} → ${formatCurrency(changes.unitPrice)}`);
-        if (o.amountPaid !== changes.amountPaid) diffs.push(`Amount Paid changed from ${formatCurrency(o.amountPaid)} → ${formatCurrency(changes.amountPaid)}`);
-        if (o.quantity !== changes.quantity) diffs.push(`Quantity Required changed from ${o.quantity} → ${changes.quantity}`);
-        if (o.quantityCompleted !== changes.quantityCompleted) diffs.push(`Quantity Completed changed from ${o.quantityCompleted} → ${changes.quantityCompleted}`);
-        if (o.paymentStatus !== changes.paymentStatus) diffs.push(`Payment Status changed from ${PAYMENT_STATUS[o.paymentStatus].label} → ${PAYMENT_STATUS[changes.paymentStatus].label}`);
+    // Catch up if user returns from being offline or switches tabs
+    const handleFocus = () => {
+      loadData();
+    };
+    window.addEventListener("focus", handleFocus);
 
-        if (o.status !== changes.status) {
-          pushNotification({
-            type: "status_update",
-            user: "Admin User",
-            orderRef: o.refNo,
-            customerName: o.customerName,
-            detail: `Order Status changed from ${ORDER_STATUS[o.status].label} → ${ORDER_STATUS[changes.status].label}`,
-          });
-        }
-        diffs.forEach((d) => {
-          pushNotification({ type: "detail_update", user: "Admin User", orderRef: o.refNo, customerName: o.customerName, detail: d });
-        });
-
-        return updated;
-      })
+    // Subscribe to real-time WebSocket events
+    const unsubscribeOrders = subscribeToOrders(
+      (newOrder) => {
+        setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+      },
+      (updatedOrder) => {
+        setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+      }
     );
-    flashToast(changes.status === "completed" ? "Order marked Complete and moved to Completed Transactions." : "Order updated successfully.");
+
+    const unsubscribeNotifications = subscribeToNotifications((notif) => {
+      setNotifications((prev) => [notif, ...prev.filter((n) => n.id !== notif.id)]);
+      flashToast(`🔔 ${notif.user}: ${notif.detail}`);
+    });
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      unsubscribeOrders();
+      unsubscribeNotifications();
+    };
+  }, [user]);
+
+  const handleCreateOrder = async (data: NewOrderFormData) => {
+    try {
+      const created = await createOrder(data);
+      setOrders((prev) => [created, ...prev.filter((o) => o.id !== created.id)]);
+      flashToast(
+        data.orderType === "stock"
+          ? "Stock order saved and marked Complete."
+          : "Custom order saved and sent to Production Monitoring."
+      );
+    } catch (err: any) {
+      console.error("Create order failed:", err);
+      flashToast(`Failed to create order: ${err.message || "Unknown error"}`);
+    }
   };
 
-  
+  const handleUpdateOrder = async (id: string, changes: OrderUpdatePayload) => {
+    try {
+      const updated = await updateOrder(id, changes);
+      setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+      flashToast(
+        changes.status === "completed"
+          ? "Order marked Complete and moved to Completed Transactions."
+          : "Order updated successfully."
+      );
+    } catch (err: any) {
+      console.error("Update order failed:", err);
+      flashToast(`Failed to update order: ${err.message || "Unknown error"}`);
+    }
+  };
 
-  const unreadCount = notifications.filter((n) => (NOW.getTime() - n.timestamp.getTime()) / 60000 < 180).length;
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, readAt: new Date().toISOString() }))
+      );
+    } catch (err) {
+      console.error("Failed to mark notifications read:", err);
+    }
+  };
+
+  const handleMarkOneRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
+      );
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
+  };
+
+  // Persistent unread count from database
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
-   <Router>
-    <AuthProvider>
+    <>
       <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppShell unreadCount={unreadCount} />}>
-                
-                <Route path="/orders" element={<OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />} />
-                <Route path="/production" element={<ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />} />
-                <Route path="/completed" element={<CompletedTransactionsPage orders={orders} />} />
-                <Route path="/customers" element={<CustomerOverviewPage orders={orders} />} />
-                <Route path="/notifications" element={<NotificationsPage notifications={notifications} />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell unreadCount={unreadCount} />}>
+            <Route
+              path="/orders"
+              element={<OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
+            />
+            <Route
+              path="/production"
+              element={<ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
+            />
+            <Route path="/completed" element={<CompletedTransactionsPage orders={orders} />} />
+            <Route path="/customers" element={<CustomerOverviewPage orders={orders} />} />
+            <Route
+              path="/notifications"
+              element={
+                <NotificationsPage
+                  notifications={notifications}
+                  onMarkAllAsRead={handleMarkAllRead}
+                  onMarkAsRead={handleMarkOneRead}
+                />
+              }
+            />
 
-                <Route element={<ProtectedAdminRoute/>}>
-                <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
-                <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
-                </Route>
-                
-
-              </Route>
+            <Route element={<ProtectedAdminRoute />}>
+              <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
+              <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
             </Route>
+          </Route>
+        </Route>
       </Routes>
-    </AuthProvider>
-   </Router>
+
+      <Toast message={toast} />
+    </>
   );
 }
 
-
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </Router>
+  );
+}

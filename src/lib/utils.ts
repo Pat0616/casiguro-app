@@ -92,8 +92,10 @@ export function dueLabel(iso: string): DueLabelInfo {
   };
 }
 
-export function relativeTime(date: Date): string {
-  const diffMs = NOW.getTime() - date.getTime();
+export function relativeTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date.replace(" ", "T")) : date;
+  const now = new Date();
+  const diffMs = Math.max(0, now.getTime() - d.getTime());
   const min = Math.round(diffMs / 60000);
   if (min < 1) return "Just now";
   if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
@@ -102,7 +104,7 @@ export function relativeTime(date: Date): string {
   const days = Math.round(hrs / 24);
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days} days ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function initials(name: string): string {
