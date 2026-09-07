@@ -5,6 +5,7 @@ import { NAV_ITEMS } from "@/lib/constants";
 import Avatar from "@/components/ui/Avatar";
 import { useNavigate } from "react-router-dom";
 import { logout } from "@/utils/authAPI";
+import { useAuth } from "@/context/AuthenticationContext";
 
 interface SidebarProps {
   unreadCount: number;
@@ -14,10 +15,15 @@ interface SidebarProps {
 export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
 
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => user?.role === "admin" || !["dashboard", "statistics"].includes(item.key)
+  );
 
   const EnterLogout = async () =>
   {
     const res = logout();
+    console.log("logout", res);
     navigate('/login')
   }
 
@@ -27,7 +33,7 @@ export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
        <div className="sidebar-logocard"></div>
       </div>
       <nav className="flex-1 space-y-1 px-3">
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink

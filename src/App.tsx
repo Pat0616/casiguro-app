@@ -16,6 +16,7 @@ import StatisticsPage from "@/pages/StatisticsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import { AuthProvider } from "./context/AuthenticationContext";
 import ProtectedRoute from "./routes/ProtectedRoutes";
+import ProtectedAdminRoute from "./routes/ProtectedAdminRoute";
 
 export default function App() {
   
@@ -122,14 +123,19 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell unreadCount={unreadCount} />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
+                
                 <Route path="/orders" element={<OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />} />
                 <Route path="/production" element={<ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />} />
                 <Route path="/completed" element={<CompletedTransactionsPage orders={orders} />} />
                 <Route path="/customers" element={<CustomerOverviewPage orders={orders} />} />
-                <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
                 <Route path="/notifications" element={<NotificationsPage notifications={notifications} />} />
+
+                <Route element={<ProtectedAdminRoute/>}>
+                <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
+                <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
+                </Route>
+                
+
               </Route>
             </Route>
       </Routes>
