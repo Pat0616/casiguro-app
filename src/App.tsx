@@ -4,9 +4,8 @@ import { NOW, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import { formatCurrency, isoDate } from "@/lib/utils";
-import type { AppNotification, NewOrderFormData, Order, OrderUpdatePayload, PageKey } from "@/types";
+import type { AppNotification, NewOrderFormData, Order, OrderUpdatePayload } from "@/types";
 import AppShell from "@/components/layout/AppShell";
-import Toast from "@/components/ui/Toast";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import OrderManagementPage from "@/pages/OrderManagementPage";
@@ -20,7 +19,6 @@ import ProtectedRoute from "./routes/ProtectedRoutes";
 
 export default function App() {
   
-  const [active, setActive] = useState<PageKey>("dashboard");
   const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
   const [toast, setToast] = useState("");
@@ -119,38 +117,25 @@ export default function App() {
    <Router>
     <AuthProvider>
       <Routes>
-            <Route path='/' element={<Navigate to='login'/>}></Route>
-            <Route path='/login' element={<LoginPage/>} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
 
-              <Route element={<ProtectedRoute />}>
-                   <Route element={<AppShell active={active} onNavigate={setActive} unreadCount={unreadCount} >
-
-                     
-                    {active === "dashboard" && <DashboardPage orders={orders} />}
-                    {active === "orders" && <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
-                    {active === "production" && <ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
-                    {active === "completed" && <CompletedTransactionsPage orders={orders} />}
-                    {active === "customers" && <CustomerOverviewPage orders={orders} />}
-                    {active === "statistics" && <StatisticsPage orders={orders} />}
-                    {active === "notifications" && <NotificationsPage notifications={notifications} />}
-                   </AppShell>}></Route>
-                    
-
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppShell unreadCount={unreadCount} />}>
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
+                <Route path="/orders" element={<OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />} />
+                <Route path="/production" element={<ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />} />
+                <Route path="/completed" element={<CompletedTransactionsPage orders={orders} />} />
+                <Route path="/customers" element={<CustomerOverviewPage orders={orders} />} />
+                <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
+                <Route path="/notifications" element={<NotificationsPage notifications={notifications} />} />
               </Route>
+            </Route>
       </Routes>
     </AuthProvider>
    </Router>
   );
-
-
-                    {active === "dashboard" && <DashboardPage orders={orders} />}
-                    {active === "orders" && <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
-                    {active === "production" && <ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
-                    {active === "completed" && <CompletedTransactionsPage orders={orders} />}
-                    {active === "customers" && <CustomerOverviewPage orders={orders} />}
-                    {active === "statistics" && <StatisticsPage orders={orders} />}
-                    {active === "notifications" && <NotificationsPage notifications={notifications} />}
- 
 }
 
 
