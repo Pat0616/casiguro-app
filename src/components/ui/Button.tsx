@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes } from "react";
+import { ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
 
@@ -7,7 +7,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "md" | "lg";
 }
 
-export default function Button({ variant = "primary", size = "md", className, children, ...props }: ButtonProps) {
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = "primary", size = "md", className, children, ...props },
+  ref
+) {
   const base = "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none";
   const sizes = { md: "px-4 py-2.5 text-sm", sm: "px-3 py-2 text-xs", lg: "px-5 py-3 text-sm" };
   const variants = {
@@ -17,8 +20,10 @@ export default function Button({ variant = "primary", size = "md", className, ch
     danger: "bg-rose-600 text-white hover:bg-rose-700",
   };
   return (
-    <button className={cn(base, sizes[size], variants[variant], className)} {...props}>
+    <button ref={ref} className={cn(base, sizes[size], variants[variant], className)} {...props}>
       {children}
     </button>
   );
-}
+});
+
+export default Button;

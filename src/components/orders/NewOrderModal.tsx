@@ -41,6 +41,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
 
   // Database customer suggestions
   const [customers, setCustomers] = useState<CustomerSuggestion[]>([]);
+  const customersLoadedRef = useRef(false);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [customerHighlightIndex, setCustomerHighlightIndex] = useState(-1);
 
@@ -65,9 +66,15 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
   // Fetch customers from database when modal opens
   useEffect(() => {
     if (open) {
-      getCustomers()
-        .then((data) => setCustomers(data))
-        .catch((err) => console.error("Failed to load customer suggestions:", err));
+      if (!customersLoadedRef.current) {
+        customersLoadedRef.current = true;
+        getCustomers()
+          .then((data) => setCustomers(data))
+          .catch((err) => {
+            customersLoadedRef.current = false;
+            console.error("Failed to load customer suggestions:", err);
+          });
+      }
 
       // Auto-focus the first field for instant typing
       setTimeout(() => {
@@ -101,18 +108,28 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const searchableCustomers = useMemo(
+    () =>
+      customers.map((customer) => ({
+        customer,
+        name: customer.name.toLowerCase(),
+        contactNumber: customer.contactNumber.toLowerCase(),
+      })),
+    [customers]
+  );
+
   // Filtered customer suggestions
   const filteredCustomers = useMemo(() => {
     const query = form.customerName.trim().toLowerCase();
-    if (!query) return [];
-    return customers
+    if (query.length < 2) return [];
+    return searchableCustomers
       .filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.contactNumber.toLowerCase().includes(query)
+        ({ name, contactNumber }) =>
+          name.includes(query) || contactNumber.includes(query)
       )
+      .map(({ customer }) => customer)
       .slice(0, 7);
-  }, [customers, form.customerName]);
+  }, [searchableCustomers, form.customerName]);
 
   if (!open) return null;
   const total = (Number(form.quantity) || 0) * (Number(form.unitPrice) || 0);

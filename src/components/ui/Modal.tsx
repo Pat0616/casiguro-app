@@ -15,7 +15,7 @@ export default function Modal({ open, onClose, title, subtitle, children, wide }
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/50" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
         <div className={cn("relative w-full rounded-3xl border border-slate-200 bg-white shadow-xl", wide ? "max-w-2xl" : "max-w-lg")}>
           <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
