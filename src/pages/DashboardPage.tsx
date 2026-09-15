@@ -15,10 +15,11 @@ export default function DashboardPage({ orders }: { orders: Order[] }) {
       const d = daysDiff(o.dueDate);
       return d >= 0 && d <= 7;
     });
+    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
     const revenueThisMonth = orders
-      .filter((o) => o.dateOrdered.slice(0, 7) === "2026-08")
-      .reduce((sum, o) => sum + o.amountPaid, 0);
-    const outstanding = orders.filter((o) => o.paymentStatus !== "paid").reduce((sum, o) => sum + o.balance, 0);
+      .filter((o) => o.dateOrdered && o.dateOrdered.slice(0, 7) === currentMonthPrefix)
+      .reduce((sum, o) => sum + (Number(o.amountPaid) || 0), 0);
+    const outstanding = orders.filter((o) => o.paymentStatus !== "paid").reduce((sum, o) => sum + (Number(o.balance) || 0), 0);
     return { activeCount: active.length, dueThisWeek: dueThisWeek.length, revenueThisMonth, outstanding };
   }, [orders]);
 
@@ -27,7 +28,14 @@ export default function DashboardPage({ orders }: { orders: Order[] }) {
   const topProducts = useMemo(() => {
     const map: Record<string, number> = {};
     orders.forEach((o) => {
-      map[o.product] = (map[o.product] || 0) + o.quantity;
+      if (o.items && o.items.length > 0) {
+        o.items.forEach((it) => {
+          const name = it.itemName || "Printing Deliverable";
+          map[name] = (map[name] || 0) + (Number(it.quantity) || 0);
+        });
+      } else if (o.product) {
+        map[o.product] = (map[o.product] || 0) + (Number(o.quantity) || 0);
+      }
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [orders]);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Clock, Edit3, RefreshCcw, ShoppingBag, CheckCheck, LucideIcon } from "lucide-react";
+import { Bell, Clock, Edit3, RefreshCcw, ShoppingBag, CheckCheck, LucideIcon, FileText } from "lucide-react";
 import { cn, relativeTime } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types";
@@ -12,6 +12,7 @@ const NOTIF_ICON: Record<NotificationType, { icon: LucideIcon; tint: string }> =
   new_order: { icon: ShoppingBag, tint: "text-sky-600 bg-sky-50" },
   status_update: { icon: RefreshCcw, tint: "text-violet-600 bg-violet-50" },
   detail_update: { icon: Edit3, tint: "text-amber-600 bg-amber-50" },
+  quotation_update: { icon: FileText, tint: "text-pink-600 bg-pink-50" },
 };
 
 const FILTERS: { key: NotificationType | "all"; label: string }[] = [
@@ -19,6 +20,7 @@ const FILTERS: { key: NotificationType | "all"; label: string }[] = [
   { key: "new_order", label: "New Orders" },
   { key: "status_update", label: "Status Updates" },
   { key: "detail_update", label: "Detail Updates" },
+  { key: "quotation_update", label: "Quotations" },
 ];
 
 interface NotificationsPageProps {

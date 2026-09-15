@@ -220,7 +220,7 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
                         {formatCurrency(o.totalPrice)}
                       </span>
                       <span className="ml-1.5 text-xs text-slate-500">
-                        ({o.quantity} pcs @ {formatCurrency(o.unitPrice)})
+                        ({o.items && o.items.length > 1 ? `${o.items.length} items · ` : ""}{o.quantity} pcs)
                       </span>
                     </div>
                   </div>
@@ -229,12 +229,22 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
                   <div className="mt-3">
                     <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-slate-500">
                       <span>Production Progress: {o.quantityCompleted} / {o.quantity} pcs completed</span>
-                      <span className="font-bold text-slate-700">{progress}%</span>
+                      <span className="font-bold text-slate-700">
+                        {o.overallProgress !== undefined ? o.overallProgress : (o.quantity > 0 ? Math.round((o.quantityCompleted / o.quantity) * 100) : 0)}%
+                      </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
                         className={cn(GRADIENT, "h-full rounded-full transition-all duration-300")}
-                        style={{ width: `${progress}%` }}
+                        style={{
+                          width: `${
+                            o.overallProgress !== undefined
+                              ? o.overallProgress
+                              : o.quantity > 0
+                              ? Math.round((o.quantityCompleted / o.quantity) * 100)
+                              : 0
+                          }%`,
+                        }}
                       />
                     </div>
                   </div>

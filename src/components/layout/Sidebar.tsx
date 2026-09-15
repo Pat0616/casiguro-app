@@ -17,7 +17,7 @@ export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const visibleNavItems = NAV_ITEMS.filter(
-    (item) => user?.role === "admin" || !["dashboard", "statistics"].includes(item.key)
+    (item) => user?.role === "admin" || !["dashboard", "statistics", "products-services"].includes(item.key)
   );
 
   const EnterLogout = async () =>

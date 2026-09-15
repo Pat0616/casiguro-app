@@ -19,6 +19,7 @@ import CompletedTransactionsPage from "@/pages/CompletedTransactionsPage";
 import CustomerOverviewPage from "@/pages/CustomerOverviewPage";
 import StatisticsPage from "@/pages/StatisticsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
+import ProductServiceCatalogPage from "@/pages/ProductServiceCatalogPage";
 import Toast from "@/components/ui/Toast";
 
 import { AuthProvider, useAuth } from "./context/AuthenticationContext";
@@ -170,6 +171,7 @@ function MainApp() {
             <Route element={<ProtectedAdminRoute />}>
               <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
               <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
+              <Route path="/products-services" element={<ProductServiceCatalogPage />} />
             </Route>
           </Route>
         </Route>

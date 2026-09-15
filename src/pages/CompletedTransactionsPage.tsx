@@ -31,6 +31,7 @@ export default function CompletedTransactionsPage({ orders }: { orders: Order[] 
         o.product.toLowerCase().includes(q) ||
         o.category.toLowerCase().includes(q) ||
         o.refNo.toLowerCase().includes(q) ||
+        (o.items && o.items.some((it) => it.itemName.toLowerCase().includes(q))) ||
         formatDate(o.dateCompleted).toLowerCase().includes(q);
       return matchYear && matchMonth && matchQuery;
     })

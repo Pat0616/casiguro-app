@@ -24,3 +24,22 @@ export function updateOrder(id: string, payload: OrderUpdatePayload): Promise<Or
   });
 }
 
+export function updateItemProduction(
+  orderId: string,
+  payload: { items?: { id: string; quantityCompleted: number }[]; itemId?: string; quantityCompleted?: number }
+): Promise<{ message: string; order: Order }> {
+  return apiRequest(`/api/orders/${orderId}/production`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function recordPayment(
+  orderId: string,
+  payload: { amount: number; paymentMethod?: string; note?: string }
+): Promise<{ message: string; payment: any; order: Order }> {
+  return apiRequest(`/api/orders/${orderId}/payment`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

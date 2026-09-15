@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, ClipboardList, Factory, CheckCircle2, Users, BarChart3, Bell,
+  LayoutDashboard, ClipboardList, Factory, CheckCircle2, Users, BarChart3, Bell, PackageCheck,
 } from "lucide-react";
 import type { OrderStatus, PageKey, PaymentStatusKey } from "@/types";
 
@@ -13,6 +13,7 @@ export const GRADIENT_TEXT = "bg-gradient-to-r from-pink-600 via-fuchsia-600 to-
 
 export const NAV_ITEMS: { key: PageKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "products-services", label: "Catalog & Pricing", icon: PackageCheck },
   { key: "orders", label: "Order Management", icon: ClipboardList },
   { key: "production", label: "Production Monitoring", icon: Factory },
   { key: "completed", label: "Completed Transactions", icon: CheckCircle2 },

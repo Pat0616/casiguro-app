@@ -71,8 +71,9 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
           {filtered.map((o) => {
             const cfg = ORDER_STATUS[o.status];
             const pcfg = PAYMENT_STATUS[o.paymentStatus];
-            const progress = Math.round((o.quantityCompleted / o.quantity) * 100);
+            const progress = o.overallProgress !== undefined ? o.overallProgress : (o.quantity > 0 ? Math.round((o.quantityCompleted / o.quantity) * 100) : 0);
             const due = dueLabel(o.dueDate);
+            const itemCount = o.items?.length || 1;
             return (
               <button
                 key={o.id}
@@ -89,7 +90,14 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
                   </div>
                   <Badge config={cfg} label={cfg.label} />
                 </div>
-                <p className="mt-3 truncate text-sm font-semibold text-slate-700">{o.product}</p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold text-slate-700">{o.product}</p>
+                  {itemCount > 1 && (
+                    <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                      {itemCount} items
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400">{o.category}</p>
 
                 <div className="mt-3">

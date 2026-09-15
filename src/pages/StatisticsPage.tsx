@@ -30,7 +30,14 @@ export default function StatisticsPage({ orders }: { orders: Order[] }) {
   const onTimeRate = inPeriod.length ? Math.round((onTimeCount / inPeriod.length) * 100) : 0;
   const productVolume: Record<string, number> = {};
   inPeriod.forEach((o) => {
-    productVolume[o.product] = (productVolume[o.product] || 0) + o.quantity;
+    if (o.items && o.items.length > 0) {
+      o.items.forEach((it) => {
+        const name = it.itemName || "Printing Deliverable";
+        productVolume[name] = (productVolume[name] || 0) + (Number(it.quantity) || 0);
+      });
+    } else if (o.product) {
+      productVolume[o.product] = (productVolume[o.product] || 0) + (Number(o.quantity) || 0);
+    }
   });
   const mostSold = Object.entries(productVolume).sort((a, b) => b[1] - a[1])[0];
 
@@ -54,7 +61,15 @@ export default function StatisticsPage({ orders }: { orders: Order[] }) {
   const categoryData = useMemo(() => {
     const map: Record<string, number> = {};
     inPeriod.forEach((o) => {
-      map[o.category] = (map[o.category] || 0) + o.totalPrice;
+      if (o.items && o.items.length > 0) {
+        o.items.forEach((it) => {
+          const cat = it.category || o.category || "General";
+          map[cat] = (map[cat] || 0) + (Number(it.subtotal) || 0);
+        });
+      } else {
+        const cat = o.category || "General";
+        map[cat] = (map[cat] || 0) + (Number(o.totalPrice) || 0);
+      }
     });
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
