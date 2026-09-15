@@ -46,3 +46,4 @@ export function toggleCatalogItemStatus(id: string, isActive?: boolean): Promise
     body: JSON.stringify({ isActive }),
   });
 }
+

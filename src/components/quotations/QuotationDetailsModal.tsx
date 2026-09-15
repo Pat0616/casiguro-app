@@ -517,3 +517,4 @@ export default function QuotationDetailsModal({
     </div>
   );
 }
+
