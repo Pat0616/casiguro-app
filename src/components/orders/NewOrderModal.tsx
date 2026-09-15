@@ -1,21 +1,25 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
+  Briefcase,
+  Calendar,
+  Check,
+  ChevronDown,
   Factory,
   PackageCheck,
-  Plus,
-  User,
   Phone,
-  ChevronDown,
-  Check,
-  Calendar,
+  Plus,
+  Trash2,
+  User,
 } from "lucide-react";
 import { cn, formatCurrency, isoDate } from "@/lib/utils";
 import { CATEGORIES, NOW } from "@/lib/constants";
-import type { NewOrderFormData, OrderType } from "@/types";
+import type { CatalogItem, NewOrderFormData, OrderType } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
-import { getCustomers, CustomerSuggestion } from "@/utils/customerAPI";
+import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
+import { getCatalogItems } from "@/utils/catalogAPI";
 
 interface NewOrderModalProps {
   open: boolean;
@@ -23,13 +27,24 @@ interface NewOrderModalProps {
   onCreate: (data: NewOrderFormData) => void;
 }
 
+const makeEmptyItem = () => ({
+  tempId: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  productServiceId: null as string | null,
+  itemName: "",
+  itemDescription: "",
+  category: "General",
+  itemType: "product" as "product" | "service",
+  isCustom: false,
+  quantity: 1,
+  basePrice: 0,
+  finalUnitPrice: 0,
+  priceAdjustmentReason: "",
+  subtotal: 0,
+});
+
 const emptyForm = {
   customerName: "",
   contactNumber: "",
-  product: "",
-  category: CATEGORIES[0],
-  quantity: 1,
-  unitPrice: 0,
   notes: "",
   dateOrdered: isoDate(NOW),
   dueDate: isoDate(NOW),
@@ -38,56 +53,43 @@ const emptyForm = {
 export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModalProps) {
   const [orderType, setOrderType] = useState<OrderType>("custom");
   const [form, setForm] = useState(emptyForm);
-
-  // Database customer suggestions
   const [customers, setCustomers] = useState<CustomerSuggestion[]>([]);
-  const customersLoadedRef = useRef(false);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [customerHighlightIndex, setCustomerHighlightIndex] = useState(-1);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Category combobox state
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [categoryHighlightIndex, setCategoryHighlightIndex] = useState(0);
+  const [items, setItems] = useState<ReturnType<typeof makeEmptyItem>[]>([makeEmptyItem()]);
 
-  // Field Navigation Refs for Fast Transaction Recording
-  const customerNameRef = useRef<HTMLInputElement>(null);
+  const customersLoadedRef = useRef(false);
   const customerContainerRef = useRef<HTMLDivElement>(null);
-  const contactNumberRef = useRef<HTMLInputElement>(null);
-  const productRef = useRef<HTMLInputElement>(null);
-  const categoryBtnRef = useRef<HTMLButtonElement>(null);
-  const categoryContainerRef = useRef<HTMLDivElement>(null);
-  const quantityRef = useRef<HTMLInputElement>(null);
-  const unitPriceRef = useRef<HTMLInputElement>(null);
-  const dateOrderedRef = useRef<HTMLInputElement>(null);
-  const dueDateRef = useRef<HTMLInputElement>(null);
+  const customerNameRef = useRef<HTMLInputElement>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const submitBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Fetch customers from database when modal opens
   useEffect(() => {
-    if (open) {
-      if (!customersLoadedRef.current) {
-        customersLoadedRef.current = true;
-        getCustomers()
-          .then((data) => setCustomers(data))
-          .catch((err) => {
-            customersLoadedRef.current = false;
-            console.error("Failed to load customer suggestions:", err);
-          });
-      }
+    if (!open) return;
 
-      // Auto-focus the first field for instant typing
-      setTimeout(() => {
-        customerNameRef.current?.focus();
-      }, 80);
-    } else {
-      setShowCustomerSuggestions(false);
-      setIsCategoryOpen(false);
-      setCustomerHighlightIndex(-1);
+    setLoadingCatalog(true);
+    Promise.all([getCatalogItems({ includeInactive: false }), getCustomers()])
+      .then(([catalog, customerList]) => {
+        setCatalogItems(catalog);
+        setCustomers(customerList);
+      })
+      .catch((err) => console.error("Error loading order dependencies:", err))
+      .finally(() => setLoadingCatalog(false));
+
+    if (!customersLoadedRef.current) {
+      customersLoadedRef.current = true;
+      getCustomers()
+        .then((data) => setCustomers(data))
+        .catch((err) => console.error("Failed to load customer suggestions:", err));
     }
+
+    setTimeout(() => customerNameRef.current?.focus(), 80);
   }, [open]);
 
-  // Click outside listener for dropdowns
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -96,181 +98,196 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       ) {
         setShowCustomerSuggestions(false);
       }
-      if (
-        categoryContainerRef.current &&
-        !categoryContainerRef.current.contains(e.target as Node)
-      ) {
-        setIsCategoryOpen(false);
-      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const searchableCustomers = useMemo(
+  const filteredCustomerSuggestions = useMemo(
     () =>
-      customers.map((customer) => ({
-        customer,
-        name: customer.name.toLowerCase(),
-        contactNumber: customer.contactNumber.toLowerCase(),
-      })),
-    [customers]
+      customers.filter(
+        (c) =>
+          form.customerName.trim() &&
+          c.name.toLowerCase().includes(form.customerName.trim().toLowerCase())
+      ),
+    [customers, form.customerName]
   );
 
-  // Filtered customer suggestions
-  const filteredCustomers = useMemo(() => {
-    const query = form.customerName.trim().toLowerCase();
-    if (query.length < 2) return [];
-    return searchableCustomers
-      .filter(
-        ({ name, contactNumber }) =>
-          name.includes(query) || contactNumber.includes(query)
-      )
-      .map(({ customer }) => customer)
-      .slice(0, 7);
-  }, [searchableCustomers, form.customerName]);
-
-  if (!open) return null;
-  const total = (Number(form.quantity) || 0) * (Number(form.unitPrice) || 0);
-
-  const update = (key: keyof typeof form) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }));
-    if (key === "customerName") {
-      setShowCustomerSuggestions(true);
-      setCustomerHighlightIndex(0);
-    }
-  };
-
-  // Select customer from suggestion list
-  const selectCustomer = (c: CustomerSuggestion) => {
-    setForm((f) => ({
-      ...f,
-      customerName: c.name,
-      contactNumber: c.contactNumber || f.contactNumber,
+  const handleSelectCustomer = (customer: CustomerSuggestion) => {
+    setForm((prev) => ({
+      ...prev,
+      customerName: customer.name,
+      contactNumber: customer.contactNumber || prev.contactNumber,
     }));
     setShowCustomerSuggestions(false);
-    setCustomerHighlightIndex(-1);
-    // Proceed to contact info (editable)
-    setTimeout(() => {
-      contactNumberRef.current?.focus();
-    }, 50);
   };
 
-  // Customer Name Keyboard Navigation
-  const handleCustomerKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (!showCustomerSuggestions && filteredCustomers.length > 0) {
-        setShowCustomerSuggestions(true);
-        setCustomerHighlightIndex(0);
-      } else if (filteredCustomers.length > 0) {
-        setCustomerHighlightIndex((prev) =>
-          prev < filteredCustomers.length - 1 ? prev + 1 : 0
-        );
-      }
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (filteredCustomers.length > 0) {
-        setCustomerHighlightIndex((prev) =>
-          prev <= 0 ? filteredCustomers.length - 1 : prev - 1
-        );
-      }
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (
-        showCustomerSuggestions &&
-        customerHighlightIndex >= 0 &&
-        customerHighlightIndex < filteredCustomers.length
-      ) {
-        selectCustomer(filteredCustomers[customerHighlightIndex]);
-      } else {
-        setShowCustomerSuggestions(false);
-        contactNumberRef.current?.focus();
-      }
-    } else if (e.key === "Escape") {
-      setShowCustomerSuggestions(false);
-    }
+  const handleAddItem = () => setItems((prev) => [...prev, makeEmptyItem()]);
+
+  const handleRemoveItem = (index: number) => {
+    if (items.length <= 1) return;
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Category Combobox Keyboard Navigation
-  const handleCategoryKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setIsCategoryOpen(true);
-      const nextIdx = (categoryHighlightIndex + 1) % CATEGORIES.length;
-      setCategoryHighlightIndex(nextIdx);
-      setForm((f) => ({ ...f, category: CATEGORIES[nextIdx] }));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setIsCategoryOpen(true);
-      const prevIdx =
-        categoryHighlightIndex <= 0
-          ? CATEGORIES.length - 1
-          : categoryHighlightIndex - 1;
-      setCategoryHighlightIndex(prevIdx);
-      setForm((f) => ({ ...f, category: CATEGORIES[prevIdx] }));
-    } else if (e.key === " " || e.key === "Spacebar") {
-      e.preventDefault();
-      setIsCategoryOpen((prev) => !prev);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      setIsCategoryOpen(false);
-      quantityRef.current?.focus();
-      quantityRef.current?.select();
-    } else if (e.key === "Escape") {
-      setIsCategoryOpen(false);
-    }
+  const handleCatalogSelection = (index: number, catalogId: string) => {
+    const found = catalogItems.find((item) => item.id === catalogId);
+    if (!found) return;
+
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        const qty = it.quantity || 1;
+        const basePrice = Number(found.basePrice || found.defaultUnitPrice || 0);
+        return {
+          ...it,
+          productServiceId: found.id,
+          itemName: found.name,
+          itemDescription: found.description || "",
+          category: found.categoryName || "General",
+          itemType: found.type,
+          isCustom: false,
+          basePrice,
+          finalUnitPrice: basePrice,
+          priceAdjustmentReason: "",
+          subtotal: Number((qty * basePrice).toFixed(2)),
+        };
+      })
+    );
   };
 
-  // Calendar Space and Enter Navigation
-  const handleDateKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    nextRef?: React.RefObject<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    if (e.key === " " || e.key === "Spacebar") {
-      e.preventDefault();
-      // Invoke native browser calendar picker
-      const target = e.currentTarget;
-      if (typeof target.showPicker === "function") {
-        target.showPicker();
-      }
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (nextRef?.current) {
-        nextRef.current.focus();
-      }
-    }
+  const handleToggleCustom = (index: number, isCustom: boolean) => {
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        return {
+          ...it,
+          isCustom,
+          productServiceId: isCustom ? null : it.productServiceId,
+          itemName: isCustom ? "" : it.itemName || "",
+          basePrice: isCustom ? 0 : it.basePrice,
+          finalUnitPrice: isCustom ? 0 : it.finalUnitPrice,
+          priceAdjustmentReason: isCustom ? "" : it.priceAdjustmentReason,
+          subtotal: isCustom ? 0 : it.subtotal,
+        };
+      })
+    );
   };
 
-  const submit = (e: FormEvent) => {
+  const handleItemFieldChange = (index: number, field: string, value: any) => {
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== index) return it;
+
+        const updated = { ...it, [field]: value };
+        const qty = field === "quantity" ? Math.max(1, Number(value) || 1) : updated.quantity;
+        const finalPrice =
+          field === "finalUnitPrice" ? Math.max(0, Number(value) || 0) : updated.finalUnitPrice;
+
+        updated.quantity = qty;
+        updated.finalUnitPrice = finalPrice;
+        updated.subtotal = Number((qty * finalPrice).toFixed(2));
+
+        return updated;
+      })
+    );
+  };
+
+  const totalOrderAmount = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!form.customerName || !form.product) return;
+    setFormError(null);
+
+    if (!form.customerName.trim()) {
+      setFormError("Customer name is required.");
+      return;
+    }
+
+    if (items.length === 0) {
+      setFormError("At least one item is required for this order.");
+      return;
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.itemName.trim() && !item.isCustom) {
+        setFormError(`Item #${i + 1} needs a catalog item or a custom item name.`);
+        return;
+      }
+
+      if (item.isCustom && !item.itemName.trim()) {
+        setFormError(`Custom item #${i + 1} needs a valid item name.`);
+        return;
+      }
+
+      if (item.quantity <= 0) {
+        setFormError(`Item "${item.itemName || `#${i + 1}`}" must have a quantity greater than 0.`);
+        return;
+      }
+
+      if (item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001) {
+        if (!item.priceAdjustmentReason || !item.priceAdjustmentReason.trim()) {
+          setFormError(
+            `Item #${i + 1} has an adjusted price. Please enter a price adjustment reason.`
+          );
+          return;
+        }
+      }
+    }
+
+    const mappedItems = items.map((item) => ({
+      productServiceId: item.productServiceId,
+      itemName: item.itemName.trim(),
+      itemDescription: item.itemDescription?.trim() || undefined,
+      category: item.category?.trim() || "General",
+      itemType: item.itemType,
+      isCustom: item.isCustom,
+      quantity: item.quantity,
+      basePrice: item.basePrice,
+      finalUnitPrice: item.finalUnitPrice,
+      priceAdjustmentReason:
+        item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001
+          ? item.priceAdjustmentReason.trim()
+          : null,
+      subtotal: item.subtotal,
+    }));
+
     onCreate({
-      ...form,
-      quantity: Number(form.quantity),
-      unitPrice: Number(form.unitPrice),
+      customerName: form.customerName.trim(),
+      contactNumber: form.contactNumber.trim(),
+      product: mappedItems.map((item) => item.itemName).join(", ") || "Custom order",
+      category: mappedItems[0]?.category || CATEGORIES[0],
+      quantity: totalQuantity,
+      unitPrice: mappedItems[0]?.finalUnitPrice || 0,
+      notes: form.notes.trim(),
+      dateOrdered: form.dateOrdered,
+      dueDate: form.dueDate,
       orderType,
+      items: mappedItems,
     });
-    setForm(emptyForm);
+
+    setForm({ ...emptyForm, dateOrdered: isoDate(NOW), dueDate: isoDate(NOW) });
+    setItems([makeEmptyItem()]);
     setOrderType("custom");
+    setFormError(null);
+    onClose();
   };
+
+  if (!open) return null;
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="New Order"
-      subtitle="Fast transaction recording with keyboard navigation"
+      title="New Direct Order"
+      subtitle="Confirm and forward an order straight to production monitoring"
       wide
     >
-      <form onSubmit={submit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <span className="mb-2 block text-xs font-semibold text-slate-600">
-            Order Type
-          </span>
+          <span className="mb-2 block text-xs font-semibold text-slate-600">Order Type</span>
           <div className="grid grid-cols-2 gap-3">
             {[
               {
@@ -310,251 +327,286 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* 1. Customer Name with Suggestive Combobox */}
+        {formError && (
+          <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {formError}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div ref={customerContainerRef} className="relative">
-            <Field label="Name of Customer">
-              <input
-                ref={customerNameRef}
-                required
-                className={inputClass}
-                value={form.customerName}
-                onChange={update("customerName")}
-                onFocus={() => {
-                  if (form.customerName.trim().length > 0) {
+            <Field label="Customer Name">
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  ref={customerNameRef}
+                  type="text"
+                  className={cn(inputClass, "pl-9")}
+                  value={form.customerName}
+                  onChange={(e) => {
+                    setForm((prev) => ({ ...prev, customerName: e.target.value }));
                     setShowCustomerSuggestions(true);
-                  }
-                }}
-                onKeyDown={handleCustomerKeyDown}
-                placeholder="Type customer name..."
-                autoComplete="off"
+                  }}
+                  onFocus={() => form.customerName.trim() && setShowCustomerSuggestions(true)}
+                  placeholder="Customer name"
+                  autoComplete="off"
+                />
+              </div>
+            </Field>
+
+            {showCustomerSuggestions && filteredCustomerSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-[102%] z-50 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-slate-900/5">
+                {filteredCustomerSuggestions.map((customer, idx) => (
+                  <button
+                    key={customer.id || customer.name}
+                    type="button"
+                    onClick={() => handleSelectCustomer(customer)}
+                    onMouseEnter={() => setCustomerHighlightIndex(idx)}
+                    className={cn(
+                      "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      idx === customerHighlightIndex
+                        ? "bg-pink-50 text-pink-800 font-semibold"
+                        : "text-slate-700 hover:bg-slate-50"
+                    )}
+                  >
+                    <span>{customer.name}</span>
+                    {customer.contactNumber && (
+                      <span className="text-[11px] text-slate-400">{customer.contactNumber}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Field label="Contact Number">
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                className={cn(inputClass, "pl-9")}
+                value={form.contactNumber}
+                onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                placeholder="0917 000 0000"
               />
-            </Field>
-
-            {/* Floating Suggestions Dropdown */}
-            {showCustomerSuggestions && filteredCustomers.length > 0 && (
-              <div className="absolute left-0 right-0 top-[102%] z-50 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-slate-900/5">
-                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Previous Customers (Database)
-                </div>
-                {filteredCustomers.map((cust, idx) => {
-                  const isHighlighted = idx === customerHighlightIndex;
-                  return (
-                    <button
-                      key={cust.id || cust.name}
-                      type="button"
-                      onClick={() => selectCustomer(cust)}
-                      onMouseEnter={() => setCustomerHighlightIndex(idx)}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                        isHighlighted
-                          ? "bg-pink-50 text-pink-800 font-semibold"
-                          : "text-slate-700 hover:bg-slate-50"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <User className={cn("h-4 w-4 shrink-0", isHighlighted ? "text-pink-600" : "text-slate-400")} />
-                        <span className="truncate">{cust.name}</span>
-                      </div>
-                      {cust.contactNumber && (
-                        <span className="shrink-0 font-mono text-xs text-slate-400">
-                          {cust.contactNumber}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-                <div className="border-t border-slate-100 mt-1 pt-1 px-2.5 text-[10px] text-slate-400 flex justify-between">
-                  <span>Use ↑ / ↓ to navigate</span>
-                  <span>Press ↵ Enter to auto-fill</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 2. Contact Info */}
-          <Field label="Contact Info">
-            <input
-              ref={contactNumberRef}
-              className={inputClass}
-              value={form.contactNumber}
-              onChange={update("contactNumber")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  productRef.current?.focus();
-                }
-              }}
-              placeholder="0917 000 0000"
-            />
-          </Field>
-
-          {/* 3. Product */}
-          <Field label="Product">
-            <input
-              ref={productRef}
-              required
-              className={inputClass}
-              value={form.product}
-              onChange={update("product")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  categoryBtnRef.current?.focus();
-                }
-              }}
-              placeholder="Custom T-Shirts"
-            />
-          </Field>
-
-          {/* 4. Category Combobox */}
-          <div ref={categoryContainerRef} className="relative">
-            <Field label="Category (↓ Arrow opens choices)">
-              <button
-                ref={categoryBtnRef}
-                type="button"
-                className={cn(inputClass, "flex items-center justify-between text-left")}
-                onClick={() => setIsCategoryOpen((prev) => !prev)}
-                onKeyDown={handleCategoryKeyDown}
-              >
-                <span className="font-medium text-slate-800">{form.category}</span>
-                <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", isCategoryOpen && "rotate-180")} />
-              </button>
-            </Field>
-
-            {isCategoryOpen && (
-              <div className="absolute left-0 right-0 top-[102%] z-50 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-slate-900/5">
-                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Select Category (↓/↑ arrows, ↵ Enter)
-                </div>
-                {CATEGORIES.map((c, idx) => {
-                  const isSelected = form.category === c;
-                  const isHighlighted = idx === categoryHighlightIndex;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => {
-                        setForm((f) => ({ ...f, category: c }));
-                        setCategoryHighlightIndex(idx);
-                        setIsCategoryOpen(false);
-                        quantityRef.current?.focus();
-                        quantityRef.current?.select();
-                      }}
-                      onMouseEnter={() => setCategoryHighlightIndex(idx)}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                        isSelected
-                          ? "bg-pink-50 font-bold text-pink-700"
-                          : isHighlighted
-                          ? "bg-slate-100 text-slate-900"
-                          : "text-slate-700 hover:bg-slate-50"
-                      )}
-                    >
-                      <span>{c}</span>
-                      {isSelected && <Check className="h-4 w-4 text-pink-600" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 5. Quantity */}
-          <Field label="Quantity">
-            <input
-              ref={quantityRef}
-              type="number"
-              min="1"
-              className={inputClass}
-              value={form.quantity}
-              onChange={update("quantity")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  unitPriceRef.current?.focus();
-                  unitPriceRef.current?.select();
-                }
-              }}
-            />
-          </Field>
-
-          {/* 6. Unit Price */}
-          <Field label="Unit Price">
-            <input
-              ref={unitPriceRef}
-              type="number"
-              min="0"
-              step="0.01"
-              className={inputClass}
-              value={form.unitPrice}
-              onChange={update("unitPrice")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  dateOrderedRef.current?.focus();
-                }
-              }}
-            />
-          </Field>
-
-          {/* Total Price Auto */}
-          <Field label="Total Price (Automatic)">
-            <div className={cn(inputClass, "flex items-center bg-slate-50 font-bold text-slate-700")}>
-              {formatCurrency(total)}
             </div>
           </Field>
 
-          {/* 7. Date Ordered (Space opens calendar picker) */}
-          <Field label="Date Ordered (Space opens calendar)">
-            <input
-              ref={dateOrderedRef}
-              type="date"
-              className={inputClass}
-              value={form.dateOrdered}
-              onChange={update("dateOrdered")}
-              onKeyDown={(e) => handleDateKeyDown(e, dueDateRef)}
-            />
+          <Field label="Date Ordered">
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="date"
+                className={cn(inputClass, "pl-9")}
+                value={form.dateOrdered}
+                onChange={(e) => setForm((prev) => ({ ...prev, dateOrdered: e.target.value }))}
+              />
+            </div>
           </Field>
 
-          {/* 8. Due Date (Space opens calendar picker) */}
-          <Field label="Due Date (Space opens calendar)">
-            <input
-              ref={dueDateRef}
-              type="date"
-              className={inputClass}
-              value={form.dueDate}
-              onChange={update("dueDate")}
-              onKeyDown={(e) => handleDateKeyDown(e, notesRef)}
-            />
+          <Field label="Due Date">
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="date"
+                className={cn(inputClass, "pl-9")}
+                value={form.dueDate}
+                onChange={(e) => setForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+              />
+            </div>
           </Field>
         </div>
 
-        {/* 9. Notes */}
-        <Field label="Notes / Special Instructions (↵ Enter to Save)">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-slate-800">Order Line Items</p>
+              <p className="text-xs text-slate-500">Select from the catalog and adjust pricing when needed.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="inline-flex items-center gap-2 rounded-lg bg-pink-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-pink-500"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Item
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {items.map((item, index) => (
+              <div key={item.tempId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">Item {index + 1}</span>
+                  </div>
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(index)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                      Catalog Item
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={item.productServiceId || ""}
+                        onChange={(e) => handleCatalogSelection(index, e.target.value)}
+                        className={cn(inputClass, "appearance-none pr-10")}
+                      >
+                        <option value="">Select from catalog...</option>
+                        {catalogItems.map((catalogItem) => (
+                          <option key={catalogItem.id} value={catalogItem.id}>
+                            {catalogItem.name} — {formatCurrency(catalogItem.basePrice)}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                        Custom Item
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCustom(index, !item.isCustom)}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm font-medium transition",
+                          item.isCustom
+                            ? "border-pink-200 bg-pink-50 text-pink-700"
+                            : "border-slate-200 bg-white text-slate-600"
+                        )}
+                      >
+                        <span>{item.isCustom ? "Custom entry" : "Catalog item"}</span>
+                        {item.isCustom ? <Check className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                      Item Name
+                    </label>
+                    <input
+                      type="text"
+                      value={item.itemName}
+                      onChange={(e) => handleItemFieldChange(index, "itemName", e.target.value)}
+                      className={inputClass}
+                      placeholder={item.isCustom ? "Custom item" : "Selected item name"}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                      Qty
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={item.quantity}
+                      onChange={(e) => handleItemFieldChange(index, "quantity", e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                      Price
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={item.finalUnitPrice}
+                      onChange={(e) => handleItemFieldChange(index, "finalUnitPrice", e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                      Subtotal
+                    </label>
+                    <div className="flex h-[42px] items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">
+                      <span>{formatCurrency(item.subtotal)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {(item.productServiceId || item.isCustom) && (
+                  <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_0.7fr]">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                        Price Adjustment Reason
+                      </label>
+                      <input
+                        type="text"
+                        value={item.priceAdjustmentReason || ""}
+                        onChange={(e) => handleItemFieldChange(index, "priceAdjustmentReason", e.target.value)}
+                        className={inputClass}
+                        placeholder={
+                          Math.abs(item.finalUnitPrice - item.basePrice) > 0.001
+                            ? "Why was the price adjusted?"
+                            : "Optional"
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                        Category
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={item.category}
+                          onChange={(e) => handleItemFieldChange(index, "category", e.target.value)}
+                          className={cn(inputClass, "appearance-none pr-10")}
+                        >
+                          {CATEGORIES.map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Field label="Notes / Special Instructions">
           <textarea
             ref={notesRef}
             rows={3}
             className={inputClass}
             value={form.notes}
-            onChange={update("notes")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submitBtnRef.current?.focus();
-              }
-            }}
-            placeholder="Optional notes... (Press Enter to proceed to Save button, Shift+Enter for new line)"
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+            placeholder="Optional notes for production or delivery"
           />
         </Field>
 
-        <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-semibold text-slate-600">↵ Enter</span>
-            <span>next field</span>
-            <span className="mx-1">·</span>
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-semibold text-slate-600">Space</span>
-            <span>open calendar</span>
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Order Total</p>
+            <p className="mt-1 text-2xl font-extrabold text-slate-900">{formatCurrency(totalOrderAmount)}</p>
+            <p className="text-xs text-slate-500">{totalQuantity} total units</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -562,7 +614,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
               Cancel
             </Button>
             <Button ref={submitBtnRef} type="submit">
-              <Plus className="h-4 w-4" /> Save Order
+              <Plus className="h-4 w-4" /> Confirm & Forward to Production
             </Button>
           </div>
         </div>

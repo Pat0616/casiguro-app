@@ -34,7 +34,7 @@ interface OrderManagementPageProps {
 }
 
 export default function OrderManagementPage({ orders, onCreateOrder }: OrderManagementPageProps) {
-  const [activeTab, setActiveTab] = useState<"quotations" | "orders">("quotations");
+  const [activeTab, setActiveTab] = useState<"quotations" | "orders">("orders");
 
   // Orders Tab State
   const [orderModalOpen, setOrderModalOpen] = useState(false);
