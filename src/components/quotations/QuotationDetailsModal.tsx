@@ -21,7 +21,6 @@ import {
   updateQuotationStatus,
   acceptAndConvertToOrder,
 } from "@/utils/quotationAPI";
-import { GRADIENT } from "@/lib/constants";
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -311,7 +310,7 @@ export default function QuotationDetailsModal({
                             {it.itemType === "service" ? (
                               <Briefcase className="h-3 w-3 text-sky-600" />
                             ) : (
-                              <Boxes className="h-3 w-3 text-pink-600" />
+                              <Boxes className="h-3 w-3 text-sky-600" />
                             )}
                             {it.category || "General"}
                           </span>
@@ -336,7 +335,7 @@ export default function QuotationDetailsModal({
             {/* Total Footer */}
             <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center text-sm">
               <span className="font-bold text-slate-700">Quotation Grand Total:</span>
-              <span className="font-mono font-extrabold text-base text-pink-700">
+              <span className="font-mono font-extrabold text-base text-sky-700">
                 {formatCurrency(quotation.totalAmount)}
               </span>
             </div>
@@ -372,7 +371,7 @@ export default function QuotationDetailsModal({
                 type="button"
                 onClick={handleSendQuote}
                 disabled={loadingAction}
-                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50 ${GRADIENT}`}
+                className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 {loadingAction ? "Sending..." : "Send Proposal to Customer"}
@@ -394,7 +393,7 @@ export default function QuotationDetailsModal({
                   type="button"
                   onClick={() => setShowConvertPrompt(true)}
                   disabled={loadingAction}
-                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50 ${GRADIENT}`}
+                  className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Accept & Convert to Order
@@ -410,7 +409,7 @@ export default function QuotationDetailsModal({
                   onClose();
                   onEditAndResend(quotation);
                 }}
-                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 ${GRADIENT}`}
+                className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
               >
                 Edit & Resend Proposal
               </button>
@@ -436,7 +435,7 @@ export default function QuotationDetailsModal({
                   required
                   value={convertDueDate}
                   onChange={(e) => setConvertDueDate(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -447,7 +446,7 @@ export default function QuotationDetailsModal({
                   placeholder="Special handling instructions..."
                   value={convertNotes}
                   onChange={(e) => setConvertNotes(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>
@@ -464,7 +463,7 @@ export default function QuotationDetailsModal({
                 type="button"
                 onClick={handleConfirmConvert}
                 disabled={loadingAction}
-                className={`rounded-xl px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:opacity-95 ${GRADIENT}`}
+                className="rounded-xl bg-sky-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 disabled:opacity-50"
               >
                 {loadingAction ? "Converting..." : "Confirm & Convert"}
               </button>

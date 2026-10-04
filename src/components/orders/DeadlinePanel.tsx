@@ -41,7 +41,7 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50 text-pink-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
               <CalendarClock className="h-5 w-5" />
             </div>
             <div>
@@ -65,7 +65,7 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
         {selectedDate ? (
           <button
             onClick={onClear}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-pink-600 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-sky-600 active:scale-95"
           >
             <X className="h-3.5 w-3.5" />
             Show All Deadlines

@@ -20,7 +20,7 @@ import {
   toggleCatalogItemStatus,
   type CatalogItemPayload,
 } from "@/utils/catalogAPI";
-import { CATEGORIES, GRADIENT } from "@/lib/constants";
+import { CATEGORIES } from "@/lib/constants";
 import Badge from "@/components/ui/Badge";
 
 function formatCurrency(n: number) {
@@ -178,7 +178,7 @@ export default function ProductServiceCatalogPage() {
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               Product & Service Catalog
             </h1>
-            <span className="rounded-full bg-pink-100 px-2.5 py-0.5 text-xs font-semibold text-pink-700">
+            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">
               Admin Exclusive
             </span>
           </div>
@@ -189,7 +189,7 @@ export default function ProductServiceCatalogPage() {
 
         <button
           onClick={handleOpenCreateModal}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 ${GRADIENT}`}
+          className="flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
         >
           <Plus className="h-4 w-4" />
           Add Catalog Item
@@ -205,7 +205,7 @@ export default function ProductServiceCatalogPage() {
             placeholder="Search items by name, category, or description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+            className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
           />
         </div>
 
@@ -223,7 +223,7 @@ export default function ProductServiceCatalogPage() {
             <button
               onClick={() => setTypeFilter("product")}
               className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                typeFilter === "product" ? "bg-white text-pink-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                typeFilter === "product" ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <Boxes className="h-3 w-3" />
@@ -314,7 +314,7 @@ export default function ProductServiceCatalogPage() {
                           Service
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2.5 py-1 text-xs font-medium text-pink-700 border border-pink-200">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                           <Boxes className="h-3 w-3" />
                           Product
                         </span>
@@ -400,7 +400,7 @@ export default function ProductServiceCatalogPage() {
                   placeholder="e.g. Sublimation Full Jersey, Tarpaulin Printing"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -410,7 +410,7 @@ export default function ProductServiceCatalogPage() {
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value as CatalogItemType })}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
                     <option value="product">Product (Physical Good)</option>
                     <option value="service">Service (Labor / Design)</option>
@@ -422,7 +422,7 @@ export default function ProductServiceCatalogPage() {
                   <select
                     value={formCategoryName}
                     onChange={(e) => setFormCategoryName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
@@ -445,7 +445,7 @@ export default function ProductServiceCatalogPage() {
                   placeholder="0.00"
                   value={formData.basePrice}
                   onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
                 <p className="mt-1 text-[11px] text-slate-400">
                   Acts as the baseline price snapshot. Employees must provide a reason if altering this price in quotations.
@@ -459,7 +459,7 @@ export default function ProductServiceCatalogPage() {
                   placeholder="Specifications, material details, dimensions..."
                   value={formData.description || ""}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -469,7 +469,7 @@ export default function ProductServiceCatalogPage() {
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="rounded border-slate-300 text-pink-600 focus:ring-pink-500 h-4 w-4"
+                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
                   />
                   <span>Active in Catalog</span>
                 </label>
@@ -479,7 +479,7 @@ export default function ProductServiceCatalogPage() {
                     type="checkbox"
                     checked={formData.isStockItem}
                     onChange={(e) => setFormData({ ...formData, isStockItem: e.target.checked })}
-                    className="rounded border-slate-300 text-pink-600 focus:ring-pink-500 h-4 w-4"
+                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
                   />
                   <span>Stock Inventory Item</span>
                 </label>
@@ -497,7 +497,7 @@ export default function ProductServiceCatalogPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className={`rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50 ${GRADIENT}`}
+                  className="rounded-xl bg-sky-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
                 >
                   {saving ? "Saving..." : editingItem ? "Update Item" : "Create Item"}
                 </button>

@@ -22,7 +22,6 @@ import NewOrderModal from "@/components/orders/NewOrderModal";
 import NewQuotationModal from "@/components/quotations/NewQuotationModal";
 import QuotationDetailsModal from "@/components/quotations/QuotationDetailsModal";
 import { getQuotations } from "@/utils/quotationAPI";
-import { GRADIENT } from "@/lib/constants";
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -164,7 +163,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
           {activeTab === "quotations" ? (
             <button
               onClick={() => setNewQuoteModalOpen(true)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 ${GRADIENT}`}
+              className="flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
             >
               <Plus className="h-4 w-4" />
               New Quotation
@@ -172,7 +171,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
           ) : (
             <button
               onClick={() => setOrderModalOpen(true)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 ${GRADIENT}`}
+              className="flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
             >
               <Plus className="h-4 w-4" />
               Direct Order
@@ -187,7 +186,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
           onClick={() => setActiveTab("quotations")}
           className={`flex items-center gap-2 pb-3 px-4 text-sm font-bold transition border-b-2 ${
             activeTab === "quotations"
-              ? "border-pink-600 text-pink-700"
+              ? "border-sky-600 text-sky-700"
               : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
@@ -199,7 +198,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
           onClick={() => setActiveTab("orders")}
           className={`flex items-center gap-2 pb-3 px-4 text-sm font-bold transition border-b-2 ${
             activeTab === "orders"
-              ? "border-pink-600 text-pink-700"
+              ? "border-sky-600 text-sky-700"
               : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
@@ -220,7 +219,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
                 placeholder="Search quotes by reference, customer name, notes..."
                 value={quoteSearch}
                 onChange={(e) => setQuoteSearch(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
 
@@ -302,7 +301,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
                               setSelectedQuote(q);
                               setDetailsModalOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-pink-600 transition"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-sky-600 transition"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             View Proposal

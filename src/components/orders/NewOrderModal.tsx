@@ -310,14 +310,14 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                 className={cn(
                   "rounded-2xl border p-4 text-left transition",
                   orderType === t.key
-                    ? "border-pink-300 bg-pink-50/60 ring-2 ring-pink-100"
+                    ? "border-sky-300 bg-sky-50/60 ring-2 ring-sky-100"
                     : "border-slate-200 hover:border-slate-300"
                 )}
               >
                 <t.icon
                   className={cn(
                     "mb-2 h-5 w-5",
-                    orderType === t.key ? "text-pink-600" : "text-slate-400"
+                    orderType === t.key ? "text-sky-600" : "text-slate-400"
                   )}
                 />
                 <p className="text-sm font-bold text-slate-800">{t.label}</p>
@@ -366,7 +366,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                     className={cn(
                       "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                       idx === customerHighlightIndex
-                        ? "bg-pink-50 text-pink-800 font-semibold"
+                        ? "bg-sky-50 text-sky-800 font-semibold"
                         : "text-slate-700 hover:bg-slate-50"
                     )}
                   >
@@ -427,7 +427,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
             <button
               type="button"
               onClick={handleAddItem}
-              className="inline-flex items-center gap-2 rounded-lg bg-pink-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-pink-500"
+              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-sky-700"
             >
               <Plus className="h-3.5 w-3.5" /> Add Item
             </button>
@@ -484,7 +484,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                         className={cn(
                           "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm font-medium transition",
                           item.isCustom
-                            ? "border-pink-200 bg-pink-50 text-pink-700"
+                            ? "border-sky-200 bg-sky-50 text-sky-700"
                             : "border-slate-200 bg-white text-slate-600"
                         )}
                       >

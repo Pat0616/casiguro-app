@@ -68,21 +68,21 @@ export default function MiniCalendar({ orders, selectedDate, onSelectDate }: Min
               className={cn(
                 "relative flex aspect-square items-center justify-center rounded-lg text-xs font-semibold transition",
                 isSelected
-                  ? cn(GRADIENT, "text-white shadow-sm")
+                  ? "bg-sky-600 text-white shadow-sm"
                   : hasDeadline
-                  ? "bg-pink-50 text-pink-700 hover:bg-pink-100"
+                  ? "bg-sky-50 text-sky-700 hover:bg-sky-100"
                   : "text-slate-600 hover:bg-slate-50",
                 isToday && !isSelected && "ring-2 ring-sky-300"
               )}
             >
               {d}
-              {hasDeadline && !isSelected && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-pink-500" />}
+              {hasDeadline && !isSelected && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-sky-500" />}
             </button>
           );
         })}
       </div>
       <div className="mt-4 flex items-center gap-4 text-[11px] text-slate-400">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-pink-500" /> Has deadline</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-500" /> Has deadline</span>
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full ring-2 ring-sky-300" /> Today</span>
       </div>
     </Card>

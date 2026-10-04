@@ -20,7 +20,7 @@ import type { CatalogItem, Quotation, QuotationItem } from "@/types";
 import { getCatalogItems } from "@/utils/catalogAPI";
 import { createQuotation, type NewQuotationPayload } from "@/utils/quotationAPI";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
-import { CATEGORIES, GRADIENT } from "@/lib/constants";
+import { CATEGORIES } from "@/lib/constants";
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -296,7 +296,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">Create Enterprise Quotation</h2>
-              <span className="rounded-full bg-pink-50 border border-pink-200 px-2.5 py-0.5 text-xs font-semibold text-pink-700">
+              <span className="rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
                 Multi-Item Proposal
               </span>
             </div>
@@ -341,7 +341,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                   onFocus={() => {
                     if (customerName.trim()) setShowCustomerSuggestions(true);
                   }}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 bg-white"
+                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
                 />
               </div>
 
@@ -353,9 +353,9 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                       key={c.id || c.name}
                       type="button"
                       onClick={() => handleSelectCustomer(c)}
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-pink-50 flex items-center justify-between group"
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-sky-50 flex items-center justify-between group"
                     >
-                      <span className="font-semibold text-slate-800 group-hover:text-pink-700">{c.name}</span>
+                      <span className="font-semibold text-slate-800 group-hover:text-sky-700">{c.name}</span>
                       {c.contactNumber && <span className="text-slate-400 text-[11px]">{c.contactNumber}</span>}
                     </button>
                   ))}
@@ -373,7 +373,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                   placeholder="e.g. 0917-123-4567"
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 bg-white"
+                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
                 />
               </div>
             </div>
@@ -390,7 +390,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                   required
                   value={validUntil}
                   onChange={(e) => setValidUntil(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 bg-white"
+                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
                 />
               </div>
             </div>
@@ -407,7 +407,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                 onClick={handleAddItem}
                 className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
               >
-                <Plus className="h-3.5 w-3.5 text-pink-600" />
+                <Plus className="h-3.5 w-3.5 text-sky-600" />
                 Add Item
               </button>
             </div>
@@ -432,7 +432,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                           type="checkbox"
                           checked={item.isCustom}
                           onChange={(e) => handleToggleCustom(index, e.target.checked)}
-                          className="rounded border-slate-300 text-pink-600 focus:ring-pink-500 h-3.5 w-3.5"
+                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5"
                         />
                         <span>Custom Non-Catalog Item</span>
                       </label>
@@ -463,13 +463,13 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                           placeholder="e.g. Custom Acrylic Event Trophy"
                           value={item.itemName}
                           onChange={(e) => handleItemFieldChange(index, "itemName", e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                         />
                       ) : (
                         <select
                           value={item.productServiceId || ""}
                           onChange={(e) => handleCatalogSelection(index, e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 bg-white"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
                         >
                           <option value="">-- Choose Catalog Product / Service --</option>
                           {catalogItems.map((cat) => (
@@ -490,7 +490,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                         required
                         value={item.quantity}
                         onChange={(e) => handleItemFieldChange(index, "quantity", parseInt(e.target.value) || 1)}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                       />
                     </div>
 
@@ -521,7 +521,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                         className={`w-full rounded-lg border px-3 py-1.5 text-xs font-mono font-semibold focus:outline-none focus:ring-1 ${
                           isPriceAdjusted
                             ? "border-amber-400 bg-amber-50/50 text-amber-900 focus:border-amber-500 focus:ring-amber-400"
-                            : "border-slate-200 text-slate-900 focus:border-pink-500 focus:ring-pink-500"
+                            : "border-slate-200 text-slate-900 focus:border-sky-500 focus:ring-sky-500"
                         }`}
                       />
                     </div>
@@ -567,7 +567,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
               placeholder="Terms, delivery conditions, artwork approval timeline, payment stipulations..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
             />
           </div>
         </div>
@@ -581,7 +581,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
             </div>
             <div>
               <span className="text-xs text-slate-500">Quotation Total:</span>
-              <span className="ml-1.5 text-base font-mono font-extrabold text-pink-700">
+              <span className="ml-1.5 text-base font-mono font-extrabold text-sky-700">
                 {formatCurrency(totalQuotationAmount)}
               </span>
             </div>
@@ -609,7 +609,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
               type="button"
               onClick={() => handleSubmit("sent")}
               disabled={saving}
-              className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50 ${GRADIENT}`}
+              className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
             >
               <Send className="h-3.5 w-3.5" />
               {saving ? "Processing..." : "Save & Send Quotation"}

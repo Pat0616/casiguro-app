@@ -8,8 +8,8 @@ import type { OrderStatus, PageKey, PaymentStatusKey } from "@/types";
  * pink -> pink-600/500 | blue -> sky-500 | yellow -> yellow-400
  * purple (gradient bridge) -> fuchsia-600/violet-600 | ink -> slate-900/500
  */
-export const GRADIENT = "bg-gradient-to-r from-pink-600 via-fuchsia-600 to-sky-500";
-export const GRADIENT_TEXT = "bg-gradient-to-r from-pink-600 via-fuchsia-600 to-sky-500 bg-clip-text text-transparent";
+export const GRADIENT = "bg-sky-600";
+export const GRADIENT_TEXT = "text-sky-600 font-bold";
 
 export const NAV_ITEMS: { key: PageKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
