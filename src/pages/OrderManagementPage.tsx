@@ -204,7 +204,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
           }`}
         >
           <CalendarIcon className="h-4 w-4" />
-          Active Orders & Deadlines ({orders.length})
+          Active Orders & Deadlines ({orders.filter((order) => order.status !== "completed").length})
         </button>
       </div>
 
