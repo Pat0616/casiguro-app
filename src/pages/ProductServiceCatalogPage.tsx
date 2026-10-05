@@ -35,6 +35,7 @@ export default function ProductServiceCatalogPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "product" | "service">("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   // Modal State
@@ -54,6 +55,15 @@ export default function ProductServiceCatalogPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const availableCategories = Array.from(
+    new Set([
+      ...items
+        .filter((item) => typeFilter === "all" || item.type === typeFilter)
+        .map((item) => item.categoryName?.trim())
+        .filter((category): category is string => Boolean(category)),
+    ])
+  ).sort((a, b) => a.localeCompare(b));
+  const categoryOptions = Array.from(new Set([...CATEGORIES, ...availableCategories, formCategoryName]));
 
   const fetchItems = async () => {
     try {
@@ -189,12 +199,15 @@ export default function ProductServiceCatalogPage() {
       item.categoryName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesType = typeFilter === "all" || item.type === typeFilter;
+    const matchesCategory =
+      categoryFilter === "all" ||
+      item.categoryName?.toLowerCase() === categoryFilter.toLowerCase();
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "active" && item.isActive) ||
       (statusFilter === "inactive" && !item.isActive);
 
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesType && matchesCategory && matchesStatus;
   });
 
   return (
@@ -242,7 +255,10 @@ export default function ProductServiceCatalogPage() {
             {/* Type filter */}
             <div className="flex items-center gap-1 border-b border-slate-200 sm:border-0" aria-label="Catalog item type">
               <button
-                onClick={() => setTypeFilter("all")}
+                onClick={() => {
+                  setTypeFilter("all");
+                  setCategoryFilter("all");
+                }}
                 aria-pressed={typeFilter === "all"}
                 className={`border-b-2 px-3 py-2 text-xs font-semibold transition sm:rounded-md sm:border-0 sm:py-1.5 ${
                   typeFilter === "all" ? "border-sky-600 text-sky-700 sm:bg-sky-50" : "border-transparent text-slate-600 hover:text-slate-900"
@@ -251,7 +267,10 @@ export default function ProductServiceCatalogPage() {
                 All Types
               </button>
               <button
-                onClick={() => setTypeFilter("product")}
+                onClick={() => {
+                  setTypeFilter("product");
+                  setCategoryFilter("all");
+                }}
                 aria-pressed={typeFilter === "product"}
                 className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-semibold transition sm:rounded-md sm:border-0 sm:py-1.5 ${
                   typeFilter === "product" ? "border-sky-600 text-sky-700 sm:bg-sky-50" : "border-transparent text-slate-600 hover:text-slate-900"
@@ -261,7 +280,10 @@ export default function ProductServiceCatalogPage() {
                 Products
               </button>
               <button
-                onClick={() => setTypeFilter("service")}
+                onClick={() => {
+                  setTypeFilter("service");
+                  setCategoryFilter("all");
+                }}
                 aria-pressed={typeFilter === "service"}
                 className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-semibold transition sm:rounded-md sm:border-0 sm:py-1.5 ${
                   typeFilter === "service" ? "border-sky-600 text-sky-700 sm:bg-sky-50" : "border-transparent text-slate-600 hover:text-slate-900"
@@ -271,6 +293,8 @@ export default function ProductServiceCatalogPage() {
                 Services
               </button>
             </div>
+
+            <span className="hidden h-6 w-px bg-slate-200 sm:block" />
 
           {/* Status filter */}
           <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
@@ -299,6 +323,31 @@ export default function ProductServiceCatalogPage() {
               Inactive
             </button>
             </div>
+        </div>
+        <div className="border-t border-slate-100 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {typeFilter === "product" ? "Product categories" : typeFilter === "service" ? "Service categories" : "Categories"}
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {["all", ...availableCategories].map((category) => {
+              const selected = categoryFilter === category;
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setCategoryFilter(category)}
+                  aria-pressed={selected}
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                    selected
+                      ? "bg-slate-900 text-white"
+                      : "border border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-700"
+                  }`}
+                >
+                  {category === "all" ? "All categories" : category}
+                </button>
+              );
+            })}
+          </div>
         </div>
         </div>
       </div>
@@ -472,7 +521,7 @@ export default function ProductServiceCatalogPage() {
                     onChange={(e) => setFormCategoryName(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
-                    {CATEGORIES.map((cat) => (
+                    {categoryOptions.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
