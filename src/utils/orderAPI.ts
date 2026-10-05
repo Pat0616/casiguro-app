@@ -26,7 +26,12 @@ export function updateOrder(id: string, payload: OrderUpdatePayload): Promise<Or
 
 export function updateItemProduction(
   orderId: string,
-  payload: { items?: { id: string; quantityCompleted: number }[]; itemId?: string; quantityCompleted?: number }
+  payload: {
+    items?: { id: string; quantityCompleted: number }[];
+    itemId?: string;
+    quantityCompleted?: number;
+    allowIncompletePaymentCompletion?: boolean;
+  }
 ): Promise<{ message: string; order: Order }> {
   return apiRequest(`/api/orders/${orderId}/production`, {
     method: "PUT",

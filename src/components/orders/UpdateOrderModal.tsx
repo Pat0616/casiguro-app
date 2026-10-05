@@ -21,6 +21,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatusKey>("unpaid");
   const [showPaidAddition, setShowPaidAddition] = useState(false);
   const [paidAddition, setPaidAddition] = useState("");
+  const [markCompleteDespiteBalance, setMarkCompleteDespiteBalance] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
       setPaymentStatus(order.paymentStatus);
       setShowPaidAddition(false);
       setPaidAddition("");
+      setMarkCompleteDespiteBalance(false);
     }
   }, [order]);
 
@@ -55,7 +57,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
 
   let derivedOrderStatus: OrderStatus = "pending";
   if (overallProgress >= 100) {
-    derivedOrderStatus = "completed";
+    derivedOrderStatus = balance > 0 && !markCompleteDespiteBalance ? "ready" : "completed";
   } else if (overallProgress > 0) {
     derivedOrderStatus = "in_production";
   }
@@ -103,6 +105,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
             id: it.id,
             quantityCompleted: it.quantityCompleted,
           })),
+          allowIncompletePaymentCompletion: markCompleteDespiteBalance,
         });
       }
 
@@ -331,9 +334,29 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
         </div>
 
         {overallProgress >= 100 && (
-          <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-            100% of all items completed. Saving will mark this order as Completed and archive it under Completed Transactions.
+          <div className={cn(
+            "flex items-start gap-2 rounded-xl p-3 text-xs border",
+            balance > 0 ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+          )}>
+            {balance > 0 ? (
+              <>
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={markCompleteDespiteBalance}
+                    onChange={(e) => setMarkCompleteDespiteBalance(e.target.checked)}
+                    className="mt-0.5 accent-amber-600"
+                  />
+                  <span>All items are complete, but this order still has an outstanding balance. Keep it in Production Monitoring, or select this option to mark it complete despite the unpaid balance.</span>
+                </label>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                100% of all items completed and paid. Saving will mark this order as Completed and archive it under Completed Transactions.
+              </>
+            )}
           </div>
         )}
 
