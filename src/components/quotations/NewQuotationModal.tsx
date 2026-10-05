@@ -8,6 +8,7 @@ import {
   Phone,
   Plus,
   Save,
+  ShoppingCart,
   Send,
   Trash2,
   User,
@@ -19,6 +20,7 @@ import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { formatCurrency } from "@/lib/utils";
 import { CATEGORIES } from "@/lib/constants";
 import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
+import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
 
 interface NewQuotationModalProps {
   open: boolean;
@@ -68,6 +70,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
   const [formError, setFormError] = useState<string | null>(null);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -268,6 +271,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
   const handleClose = () => {
     if (saving) return;
     setStep(1);
+    setMobileCartOpen(false);
     setFormError(null);
     onClose();
   };
@@ -307,9 +311,24 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
 
         <div className="min-h-0 flex-1 overflow-y-auto py-5">
           {step === 1 ? (
-            <div className="space-y-6">
-              <CatalogShoppingGrid items={catalogItems} loading={loadingCatalog} cartCounts={cartCounts} onAdd={handleAddCatalogItem} />
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="space-y-4 lg:grid lg:h-[calc(94vh-310px)] lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
+              <div className="min-h-0 lg:overflow-y-auto lg:pr-2">
+                <CatalogShoppingGrid items={catalogItems} loading={loadingCatalog} cartCounts={cartCounts} onAdd={handleAddCatalogItem} />
+              </div>
+              <div className="hidden min-h-0 lg:block">
+                <ShoppingCartPanel
+                  items={items}
+                  catalogItems={catalogItems}
+                  totalQuantity={totalQuotationQuantity}
+                  totalAmount={totalQuotationAmount}
+                  onAddCustom={() => setItems((prev) => [...prev, makeCartItem()])}
+                  onChange={handleChangeItem}
+                  onRemove={(tempId) => setItems((prev) => prev.filter((item) => item.tempId !== tempId))}
+                  onContinue={handleContinue}
+                  continueLabel="Quotation details"
+                />
+              </div>
+              <section className="hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-slate-900">Your cart <span className="text-slate-400">({items.length})</span></h3>
@@ -357,6 +376,36 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                   </div>
                 )}
               </section>
+
+              <div className="sticky bottom-0 z-10 -mx-2 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 p-2 backdrop-blur lg:hidden">
+                <button type="button" onClick={() => setMobileCartOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700">
+                  <ShoppingCart className="h-4 w-4" /> Cart ({items.length}) · {formatCurrency(totalQuotationAmount)}
+                </button>
+                <button type="button" onClick={handleContinue} className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white">Continue →</button>
+              </div>
+
+              {mobileCartOpen && (
+                <div className="fixed inset-0 z-[70] bg-slate-900/50 p-3 lg:hidden">
+                  <div className="mx-auto flex h-full max-w-lg flex-col">
+                    <ShoppingCartPanel
+                      className="flex-1"
+                      items={items}
+                      catalogItems={catalogItems}
+                      totalQuantity={totalQuotationQuantity}
+                      totalAmount={totalQuotationAmount}
+                      onAddCustom={() => setItems((prev) => [...prev, makeCartItem()])}
+                      onChange={handleChangeItem}
+                      onRemove={(tempId) => setItems((prev) => prev.filter((item) => item.tempId !== tempId))}
+                      onContinue={() => {
+                        setMobileCartOpen(false);
+                        handleContinue();
+                      }}
+                      continueLabel="Quotation details"
+                      onClose={() => setMobileCartOpen(false)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -392,14 +441,12 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
           )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div><span className="text-xs text-slate-500">{totalQuotationQuantity} total units · Quotation total</span><p className="font-mono text-lg font-extrabold text-sky-700">{formatCurrency(totalQuotationAmount)}</p></div>
-          {step === 1 ? (
-            <div className="flex justify-end gap-2"><button type="button" onClick={handleClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="button" onClick={handleContinue} disabled={loadingCatalog || Boolean(dependencyError)} className="rounded-xl bg-sky-600 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50">Continue to quotation details →</button></div>
-          ) : (
+        {step === 2 && (
+          <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><span className="text-xs text-slate-500">{totalQuotationQuantity} total units · Quotation total</span><p className="font-mono text-lg font-extrabold text-sky-700">{formatCurrency(totalQuotationAmount)}</p></div>
             <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={handleClose} disabled={saving} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="button" onClick={() => handleSubmit("draft")} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Save className="h-4 w-4" />Save draft</button><button type="button" onClick={() => handleSubmit("sent")} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50"><Send className="h-4 w-4" />{saving ? "Processing..." : "Save & send"}</button></div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

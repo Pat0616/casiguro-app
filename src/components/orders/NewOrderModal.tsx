@@ -8,6 +8,7 @@ import {
   PackageCheck,
   Phone,
   Plus,
+  ShoppingCart,
   Trash2,
   User,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
 import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
+import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { getCatalogItems } from "@/utils/catalogAPI";
 
@@ -75,6 +77,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [items, setItems] = useState<OrderLineItem[]>([]);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
   const customerContainerRef = useRef<HTMLDivElement>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
@@ -255,6 +258,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
 
   const handleClose = () => {
     setStep(1);
+    setMobileCartOpen(false);
     setFormError(null);
     onClose();
   };
@@ -292,15 +296,30 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
         )}
 
         {step === 1 ? (
-          <div className="space-y-6">
-            <CatalogShoppingGrid
-              items={catalogItems}
-              loading={loadingCatalog}
-              cartCounts={cartCounts}
-              onAdd={handleAddCatalogItem}
-            />
+          <div className="space-y-4 lg:grid lg:h-[calc(94vh-290px)] lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
+            <div className="min-h-0 lg:overflow-y-auto lg:pr-2">
+              <CatalogShoppingGrid
+                items={catalogItems}
+                loading={loadingCatalog}
+                cartCounts={cartCounts}
+                onAdd={handleAddCatalogItem}
+              />
+            </div>
+            <div className="hidden min-h-0 lg:block">
+              <ShoppingCartPanel
+                items={items}
+                catalogItems={catalogItems}
+                totalQuantity={totalQuantity}
+                totalAmount={totalOrderAmount}
+                onAddCustom={() => setItems((prev) => [...prev, makeEmptyItem()])}
+                onChange={handleChangeItem}
+                onRemove={(tempId) => setItems((prev) => prev.filter((item) => item.tempId !== tempId))}
+                onContinue={handleContinue}
+                continueLabel="Order details"
+              />
+            </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <section className="hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-slate-900">Your cart <span className="text-slate-400">({items.length})</span></h3>
@@ -353,13 +372,43 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
               )}
             </section>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <div className="hidden flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
               <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{totalQuantity} total units</p><p className="text-xl font-extrabold text-slate-900">{formatCurrency(totalOrderAmount)}</p></div>
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
                 <Button type="button" onClick={handleContinue}>Continue to order details <span aria-hidden="true">→</span></Button>
               </div>
             </div>
+
+            <div className="sticky bottom-0 z-10 -mx-2 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 p-2 backdrop-blur lg:hidden">
+              <button type="button" onClick={() => setMobileCartOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700">
+                <ShoppingCart className="h-4 w-4" /> Cart ({items.length}) · {formatCurrency(totalOrderAmount)}
+              </button>
+              <Button type="button" onClick={handleContinue}>Continue <span aria-hidden="true">→</span></Button>
+            </div>
+
+            {mobileCartOpen && (
+              <div className="fixed inset-0 z-[70] bg-slate-900/50 p-3 lg:hidden">
+                <div className="mx-auto flex h-full max-w-lg flex-col">
+                  <ShoppingCartPanel
+                    className="flex-1"
+                    items={items}
+                    catalogItems={catalogItems}
+                    totalQuantity={totalQuantity}
+                    totalAmount={totalOrderAmount}
+                    onAddCustom={() => setItems((prev) => [...prev, makeEmptyItem()])}
+                    onChange={handleChangeItem}
+                    onRemove={(tempId) => setItems((prev) => prev.filter((item) => item.tempId !== tempId))}
+                    onContinue={() => {
+                      setMobileCartOpen(false);
+                      handleContinue();
+                    }}
+                    continueLabel="Order details"
+                    onClose={() => setMobileCartOpen(false)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
