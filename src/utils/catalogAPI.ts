@@ -7,6 +7,7 @@ export interface CatalogItemPayload {
   type: CatalogItemType;
   basePrice: number;
   description?: string;
+  imageUrl?: string | null;
   categoryId?: string | null;
   isStockItem?: boolean;
   isActive?: boolean;
@@ -46,4 +47,3 @@ export function toggleCatalogItemStatus(id: string, isActive?: boolean): Promise
     body: JSON.stringify({ isActive }),
   });
 }
-

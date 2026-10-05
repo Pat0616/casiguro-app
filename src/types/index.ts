@@ -23,6 +23,7 @@ export interface CatalogItem {
   basePrice: number;
   defaultUnitPrice?: number;
   description: string;
+  imageUrl?: string | null;
   isStockItem: boolean;
   isActive: boolean;
   categoryId?: string | null;

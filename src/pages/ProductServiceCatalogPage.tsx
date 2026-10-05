@@ -1,7 +1,6 @@
 // casiguro-app/src/pages/ProductServiceCatalogPage.tsx
 import React, { useState, useEffect } from "react";
 import {
-  PackageCheck,
   Plus,
   Search,
   Edit2,
@@ -11,6 +10,9 @@ import {
   Boxes,
   Briefcase,
   AlertCircle,
+  ImagePlus,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 import type { CatalogItem, CatalogItemType } from "@/types";
 import {
@@ -21,7 +23,7 @@ import {
   type CatalogItemPayload,
 } from "@/utils/catalogAPI";
 import { CATEGORIES } from "@/lib/constants";
-import Badge from "@/components/ui/Badge";
+import { uploadImageToCloudinary } from "@/utils/CloudinaryAPI";
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -43,6 +45,7 @@ export default function ProductServiceCatalogPage() {
     type: "product",
     basePrice: 0,
     description: "",
+    imageUrl: null,
     categoryId: null,
     isStockItem: false,
     isActive: true,
@@ -50,6 +53,7 @@ export default function ProductServiceCatalogPage() {
   const [formCategoryName, setFormCategoryName] = useState("Apparel");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   const fetchItems = async () => {
     try {
@@ -57,9 +61,9 @@ export default function ProductServiceCatalogPage() {
       setError(null);
       const data = await getCatalogItems({ includeInactive: true });
       setItems(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to load catalog items:", err);
-      setError(err.message || "Failed to load catalog items");
+      setError(err instanceof Error ? err.message : "Failed to load catalog items");
     } finally {
       setLoading(false);
     }
@@ -76,6 +80,7 @@ export default function ProductServiceCatalogPage() {
       type: "product",
       basePrice: 0,
       description: "",
+      imageUrl: null,
       categoryId: null,
       isStockItem: false,
       isActive: true,
@@ -92,6 +97,7 @@ export default function ProductServiceCatalogPage() {
       type: item.type,
       basePrice: item.basePrice,
       description: item.description || "",
+      imageUrl: item.imageUrl || null,
       categoryId: item.categoryId || null,
       isStockItem: item.isStockItem,
       isActive: item.isActive,
@@ -107,8 +113,30 @@ export default function ProductServiceCatalogPage() {
     setFormError(null);
   };
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    try {
+      setImageUploading(true);
+      setFormError(null);
+      const imageUrl = await uploadImageToCloudinary(file);
+      setFormData((current) => ({ ...current, imageUrl }));
+    } catch (err: unknown) {
+      console.error("Catalog image upload error:", err);
+      setFormError(err instanceof Error ? err.message : "Failed to upload item image");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (imageUploading) {
+      setFormError("Wait for the image upload to finish before saving.");
+      return;
+    }
     if (!formData.name.trim()) {
       setFormError("Item name is required.");
       return;
@@ -134,9 +162,9 @@ export default function ProductServiceCatalogPage() {
 
       handleCloseModal();
       await fetchItems();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Save catalog item error:", err);
-      setFormError(err.message || "Failed to save item");
+      setFormError(err instanceof Error ? err.message : "Failed to save item");
     } finally {
       setSaving(false);
     }
@@ -148,9 +176,9 @@ export default function ProductServiceCatalogPage() {
       setItems((prev) =>
         prev.map((i) => (i.id === item.id ? { ...i, isActive: res.isActive } : i))
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Toggle status error:", err);
-      alert(`Failed to update status: ${err.message || "Error"}`);
+      alert(`Failed to update status: ${err instanceof Error ? err.message : "Error"}`);
     }
   };
 
@@ -197,48 +225,52 @@ export default function ProductServiceCatalogPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search items by name, category, or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Type filter */}
-          <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
-            <button
-              onClick={() => setTypeFilter("all")}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                typeFilter === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              All Types
-            </button>
-            <button
-              onClick={() => setTypeFilter("product")}
-              className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                typeFilter === "product" ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Boxes className="h-3 w-3" />
-              Products
-            </button>
-            <button
-              onClick={() => setTypeFilter("service")}
-              className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                typeFilter === "service" ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Briefcase className="h-3 w-3" />
-              Services
-            </button>
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search items by name, category, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-4 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            />
           </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Type filter */}
+            <div className="flex items-center gap-1 border-b border-slate-200 sm:border-0" aria-label="Catalog item type">
+              <button
+                onClick={() => setTypeFilter("all")}
+                aria-pressed={typeFilter === "all"}
+                className={`border-b-2 px-3 py-2 text-xs font-semibold transition sm:rounded-md sm:border-0 sm:py-1.5 ${
+                  typeFilter === "all" ? "border-sky-600 text-sky-700 sm:bg-sky-50" : "border-transparent text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setTypeFilter("product")}
+                aria-pressed={typeFilter === "product"}
+                className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-semibold transition sm:rounded-md sm:border-0 sm:py-1.5 ${
+                  typeFilter === "product" ? "border-sky-600 text-sky-700 sm:bg-sky-50" : "border-transparent text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Boxes className="h-3 w-3" />
+                Products
+              </button>
+              <button
+                onClick={() => setTypeFilter("service")}
+                aria-pressed={typeFilter === "service"}
+                className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-semibold transition sm:rounded-md sm:border-0 sm:py-1.5 ${
+                  typeFilter === "service" ? "border-sky-600 text-sky-700 sm:bg-sky-50" : "border-transparent text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Briefcase className="h-3 w-3" />
+                Services
+              </button>
+            </div>
 
           {/* Status filter */}
           <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
@@ -266,107 +298,94 @@ export default function ProductServiceCatalogPage() {
             >
               Inactive
             </button>
-          </div>
+            </div>
+        </div>
         </div>
       </div>
 
-      {/* Catalog Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Catalog Cards */}
+      <div>
         {loading ? (
-          <div className="p-12 text-center text-sm text-slate-500">Loading catalog items...</div>
+          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500">Loading catalog items...</div>
         ) : error ? (
-          <div className="p-12 text-center text-sm text-rose-500">
+          <div className="rounded-xl border border-rose-200 bg-white p-12 text-center text-sm text-rose-500">
             <AlertCircle className="mx-auto h-6 w-6 mb-2" />
             {error}
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="p-12 text-center text-sm text-slate-400">
+          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-400">
             No catalog items found matching your filters.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-                <tr>
-                  <th className="px-6 py-3.5">Item Name & Description</th>
-                  <th className="px-6 py-3.5">Type</th>
-                  <th className="px-6 py-3.5">Category</th>
-                  <th className="px-6 py-3.5 text-right">Base Reference Price</th>
-                  <th className="px-6 py-3.5 text-center">Status</th>
-                  <th className="px-6 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/60 transition">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{item.name}</div>
-                      {item.description ? (
-                        <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.description}</div>
-                      ) : (
-                        <div className="text-xs text-slate-400 italic mt-0.5">No description provided</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {item.type === "service" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 border border-sky-200">
-                          <Briefcase className="h-3 w-3" />
-                          Service
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-200">
-                          <Boxes className="h-3 w-3" />
-                          Product
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredItems.map((item) => (
+              <article key={item.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <div className="relative aspect-[16/10] bg-slate-100">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-slate-400">
+                      <ImageIcon className="h-10 w-10" aria-hidden="true" />
+                    </div>
+                  )}
+                  <span className={`absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                    item.type === "service" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-700"
+                  }`}>
+                    {item.type === "service" ? <Briefcase className="h-3 w-3" /> : <Boxes className="h-3 w-3" />}
+                    {item.type === "service" ? "Service" : "Product"}
+                  </span>
+                </div>
+                <div className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="truncate font-semibold text-slate-900" title={item.name}>{item.name}</h2>
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
                         <Tag className="h-3 w-3 text-slate-400" />
                         {item.categoryName}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-semibold text-slate-900">
-                      {formatCurrency(item.basePrice)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {item.isActive ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
-                          <CheckCircle className="h-3 w-3 text-emerald-600" />
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 border border-slate-200">
-                          <XCircle className="h-3 w-3 text-slate-400" />
-                          Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEditModal(item)}
-                          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition"
-                          title="Edit Item"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleStatus(item)}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition border ${
-                            item.isActive
-                              ? "text-slate-600 hover:bg-slate-100 border-slate-200"
-                              : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200"
-                          }`}
-                        >
-                          {item.isActive ? "Deactivate" : "Activate"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                    {item.isActive ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        <CheckCircle className="h-3 w-3" /> Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+                        <XCircle className="h-3 w-3" /> Inactive
+                      </span>
+                    )}
+                  </div>
+                  <p className="min-h-10 text-sm text-slate-500 line-clamp-2">
+                    {item.description || <span className="italic text-slate-400">No description provided</span>}
+                  </p>
+                  <div className="flex items-end justify-between border-t border-slate-100 pt-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Base reference price</p>
+                      <p className="mt-0.5 font-mono text-lg font-bold text-slate-900">{formatCurrency(item.basePrice)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenEditModal(item)}
+                        className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                        title="Edit Item"
+                        aria-label={`Edit ${item.name}`}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(item)}
+                        className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                          item.isActive
+                            ? "border-slate-200 text-slate-600 hover:bg-slate-100"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        {item.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </div>
@@ -390,6 +409,35 @@ export default function ProductServiceCatalogPage() {
             )}
 
             <form onSubmit={handleFormSubmit} className="mt-5 space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Item Image</label>
+                {formData.imageUrl && (
+                  <div className="relative mb-3 h-40 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                    <img src={formData.imageUrl} alt="Item preview" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, imageUrl: null })}
+                      className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-slate-600 shadow hover:text-rose-600"
+                      aria-label="Remove item image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 ${imageUploading ? "pointer-events-none opacity-50" : ""}`}>
+                  <ImagePlus className="h-4 w-4" />
+                  {imageUploading ? "Uploading image..." : formData.imageUrl ? "Replace image" : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={handleImageChange}
+                    disabled={imageUploading || saving}
+                  />
+                </label>
+                <p className="mt-1 text-[11px] text-slate-400">Images are optional and uploaded to Cloudinary.</p>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Item Name <span className="text-rose-500">*</span>
@@ -489,14 +537,14 @@ export default function ProductServiceCatalogPage() {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  disabled={saving}
+                  disabled={saving || imageUploading}
                   className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || imageUploading}
                   className="rounded-xl bg-sky-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
                 >
                   {saving ? "Saving..." : editingItem ? "Update Item" : "Create Item"}
@@ -509,4 +557,3 @@ export default function ProductServiceCatalogPage() {
     </div>
   );
 }
-
