@@ -1,30 +1,24 @@
-// casiguro-app/src/components/quotations/NewQuotationModal.tsx
-import React, { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Plus,
-  Trash2,
   AlertCircle,
-  Calendar,
-  User,
-  Phone,
-  Boxes,
   Briefcase,
-  FileText,
-  Send,
-  Save,
-  ChevronDown,
+  Calendar,
   Check,
-  Percent,
+  Image as ImageIcon,
+  Phone,
+  Plus,
+  Save,
+  Send,
+  Trash2,
+  User,
 } from "lucide-react";
 import type { CatalogItem, Quotation, QuotationItem } from "@/types";
 import { getCatalogItems } from "@/utils/catalogAPI";
 import { createQuotation, type NewQuotationPayload } from "@/utils/quotationAPI";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
+import { formatCurrency } from "@/lib/utils";
 import { CATEGORIES } from "@/lib/constants";
-
-function formatCurrency(n: number) {
-  return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
 
 interface NewQuotationModalProps {
   open: boolean;
@@ -33,71 +27,67 @@ interface NewQuotationModalProps {
 }
 
 const defaultValidityDays = 14;
+type QuotationCartItem = QuotationItem & { tempId: string };
+
+function makeCartItem(): QuotationCartItem {
+  return {
+    tempId: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    productServiceId: null,
+    itemName: "",
+    itemDescription: "",
+    category: "General",
+    itemType: "product",
+    isCustom: true,
+    quantity: 1,
+    basePrice: 0,
+    finalUnitPrice: 0,
+    priceAdjustmentReason: "",
+    subtotal: 0,
+  };
+}
+
+function getDefaultValidityDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + defaultValidityDays);
+  return date.toISOString().slice(0, 10);
+}
 
 export default function NewQuotationModal({ open, onClose, onCreated }: NewQuotationModalProps) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [customerName, setCustomerName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
-  const [validUntil, setValidUntil] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + defaultValidityDays);
-    return d.toISOString().slice(0, 10);
-  });
+  const [validUntil, setValidUntil] = useState(getDefaultValidityDate);
   const [notes, setNotes] = useState("");
-
-  // Customer suggestions
   const [customers, setCustomers] = useState<CustomerSuggestion[]>([]);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
-  const [customerHighlightIndex, setCustomerHighlightIndex] = useState(-1);
   const customerContainerRef = useRef<HTMLDivElement>(null);
-
-  // Catalog items
+  const customerNameRef = useRef<HTMLInputElement>(null);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
-
-  // Line items
-  const [items, setItems] = useState<
-    (QuotationItem & { tempId: string })[]
-  >([
-    {
-      tempId: "item-1",
-      productServiceId: null,
-      itemName: "",
-      itemDescription: "",
-      category: "General",
-      itemType: "product",
-      isCustom: false,
-      quantity: 1,
-      basePrice: 0,
-      finalUnitPrice: 0,
-      priceAdjustmentReason: "",
-      subtotal: 0,
-    },
-  ]);
-
+  const [items, setItems] = useState<QuotationCartItem[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [dependencyError, setDependencyError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Load catalog and customer suggestions when modal opens
   useEffect(() => {
-    if (open) {
-      setLoadingCatalog(true);
-      Promise.all([getCatalogItems({ includeInactive: false }), getCustomers()])
-        .then(([cats, custs]) => {
-          setCatalogItems(cats);
-          setCustomers(custs);
-        })
-        .catch((err) => console.error("Error loading quote dependencies:", err))
-        .finally(() => setLoadingCatalog(false));
-    }
+    if (!open) return;
+    setLoadingCatalog(true);
+    setDependencyError(null);
+    Promise.all([getCatalogItems({ includeInactive: false }), getCustomers()])
+      .then(([catalog, customerList]) => {
+        setCatalogItems(catalog);
+        setCustomers(customerList);
+      })
+      .catch((error: unknown) => {
+        console.error("Error loading quotation dependencies:", error);
+        setDependencyError(error instanceof Error ? error.message : "Could not load the catalog and customer list.");
+      })
+      .finally(() => setLoadingCatalog(false));
   }, [open]);
 
-  // Click outside for customer dropdown
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        customerContainerRef.current &&
-        !customerContainerRef.current.contains(e.target as Node)
-      ) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (customerContainerRef.current && !customerContainerRef.current.contains(event.target as Node)) {
         setShowCustomerSuggestions(false);
       }
     };
@@ -105,149 +95,130 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredCustomerSuggestions = customers.filter(
-    (c) =>
-      customerName.trim() &&
-      c.name.toLowerCase().includes(customerName.trim().toLowerCase())
+  const filteredCustomerSuggestions = useMemo(
+    () =>
+      customers.filter(
+        (customer) =>
+          customerName.trim() &&
+          customer.name.toLowerCase().includes(customerName.trim().toLowerCase())
+      ),
+    [customers, customerName]
   );
+  const cartCounts = useMemo(
+    () =>
+      items.reduce<Record<string, number>>((counts, item) => {
+        if (item.productServiceId) {
+          counts[item.productServiceId] = (counts[item.productServiceId] || 0) + item.quantity;
+        }
+        return counts;
+      }, {}),
+    [items]
+  );
+  const totalQuotationAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalQuotationQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleSelectCustomer = (c: CustomerSuggestion) => {
-    setCustomerName(c.name);
-    if (c.contactNumber) {
-      setContactNumber(c.contactNumber);
-    }
+  const handleSelectCustomer = (customer: CustomerSuggestion) => {
+    setCustomerName(customer.name);
+    if (customer.contactNumber) setContactNumber(customer.contactNumber);
     setShowCustomerSuggestions(false);
   };
 
-  const handleAddItem = () => {
-    setItems((prev) => [
-      ...prev,
-      {
-        tempId: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        productServiceId: null,
-        itemName: "",
-        itemDescription: "",
-        category: "General",
-        itemType: "product",
-        isCustom: false,
-        quantity: 1,
-        basePrice: 0,
-        finalUnitPrice: 0,
-        priceAdjustmentReason: "",
-        subtotal: 0,
-      },
-    ]);
-  };
-
-  const handleRemoveItem = (index: number) => {
-    if (items.length <= 1) return;
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleCatalogSelection = (index: number, catalogId: string) => {
-    const found = catalogItems.find((c) => c.id === catalogId);
-    if (!found) return;
-
-    setItems((prev) =>
-      prev.map((it, i) => {
-        if (i !== index) return it;
-        const q = it.quantity || 1;
-        return {
-          ...it,
-          productServiceId: found.id,
-          itemName: found.name,
-          itemDescription: found.description || "",
-          category: found.categoryName || "General",
-          itemType: found.type,
+  const handleAddCatalogItem = (catalogItem: CatalogItem) => {
+    const basePrice = Number(catalogItem.basePrice || catalogItem.defaultUnitPrice || 0);
+    setItems((prev) => {
+      const existingIndex = prev.findIndex((item) => item.productServiceId === catalogItem.id);
+      if (existingIndex >= 0) {
+        return prev.map((item, index) =>
+          index === existingIndex
+            ? { ...item, quantity: item.quantity + 1, subtotal: Number(((item.quantity + 1) * item.finalUnitPrice).toFixed(2)) }
+            : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          ...makeCartItem(),
+          productServiceId: catalogItem.id,
+          itemName: catalogItem.name,
+          itemDescription: catalogItem.description || "",
+          category: catalogItem.categoryName || "General",
+          itemType: catalogItem.type,
           isCustom: false,
-          basePrice: found.basePrice,
-          finalUnitPrice: found.basePrice,
-          priceAdjustmentReason: "",
-          subtotal: Number((q * found.basePrice).toFixed(2)),
-        };
-      })
-    );
+          basePrice,
+          finalUnitPrice: basePrice,
+          subtotal: basePrice,
+        },
+      ];
+    });
+    setFormError(null);
   };
 
-  const handleToggleCustom = (index: number, isCustom: boolean) => {
+  const handleChangeItem = (
+    tempId: string,
+    field: "itemName" | "category" | "quantity" | "finalUnitPrice" | "priceAdjustmentReason",
+    value: string
+  ) => {
     setItems((prev) =>
-      prev.map((it, i) => {
-        if (i !== index) return it;
+      prev.map((item) => {
+        if (item.tempId !== tempId) return item;
+        const quantity = field === "quantity" ? Math.max(1, Number(value) || 1) : item.quantity;
+        const finalUnitPrice = field === "finalUnitPrice" ? Math.max(0, Number(value) || 0) : item.finalUnitPrice;
         return {
-          ...it,
-          isCustom,
-          productServiceId: isCustom ? null : it.productServiceId,
-          basePrice: isCustom ? 0 : it.basePrice,
-          priceAdjustmentReason: isCustom ? "" : it.priceAdjustmentReason,
+          ...item,
+          [field]: field === "quantity" || field === "finalUnitPrice" ? Number(value) : value,
+          quantity,
+          finalUnitPrice,
+          subtotal: Number((quantity * finalUnitPrice).toFixed(2)),
         };
       })
     );
   };
 
-  const handleItemFieldChange = (index: number, field: string, value: any) => {
-    setItems((prev) =>
-      prev.map((it, i) => {
-        if (i !== index) return it;
-        const updated = { ...it, [field]: value };
-
-        const qty = field === "quantity" ? Math.max(1, Number(value) || 1) : updated.quantity;
-        const price = field === "finalUnitPrice" ? Math.max(0, Number(value) || 0) : updated.finalUnitPrice;
-        updated.quantity = qty;
-        updated.finalUnitPrice = price;
-        updated.subtotal = Number((qty * price).toFixed(2));
-
-        return updated;
-      })
-    );
+  const handleContinue = () => {
+    if (items.length === 0) {
+      setFormError("Add at least one product or service to continue.");
+      return;
+    }
+    for (const [index, item] of items.entries()) {
+      if (!item.itemName.trim()) {
+        setFormError(`Add a name for item #${index + 1}.`);
+        return;
+      }
+      if (!item.isCustom && item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001 && !item.priceAdjustmentReason?.trim()) {
+        setFormError(`Add a price adjustment reason for ${item.itemName}.`);
+        return;
+      }
+    }
+    setFormError(null);
+    setStep(2);
+    setTimeout(() => customerNameRef.current?.focus(), 80);
   };
-
-  const totalQuotationAmount = items.reduce((sum, it) => sum + (it.subtotal || 0), 0);
-  const totalQuotationQuantity = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
 
   const handleSubmit = async (submitStatus: "draft" | "sent") => {
     setFormError(null);
-
     if (!customerName.trim()) {
       setFormError("Customer name is required.");
       return;
     }
-
     if (!validUntil) {
       setFormError("Quotation validity date is required.");
       return;
     }
-
     if (items.length === 0) {
-      setFormError("At least one line item is required.");
+      setFormError("Add at least one line item.");
+      setStep(1);
       return;
     }
-
-    // Validate items
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
-      if (!it.itemName.trim()) {
-        setFormError(`Item #${i + 1} requires a valid item name.`);
+    for (const [index, item] of items.entries()) {
+      if (!item.itemName.trim()) {
+        setFormError(`Add a name for item #${index + 1}.`);
+        setStep(1);
         return;
       }
-      if (it.quantity <= 0) {
-        setFormError(`Item "${it.itemName}" must have a quantity of at least 1.`);
+      if (!item.isCustom && item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001 && !item.priceAdjustmentReason?.trim()) {
+        setFormError(`Add a price adjustment reason for ${item.itemName}.`);
+        setStep(1);
         return;
-      }
-
-      // MANDATORY PRICE ADJUSTMENT VALIDATION
-      if (!it.isCustom && it.productServiceId) {
-        if (Math.abs(it.finalUnitPrice - it.basePrice) > 0.001) {
-          if (!it.priceAdjustmentReason || !it.priceAdjustmentReason.trim()) {
-            setFormError(
-              `Item #${i + 1} ("${it.itemName}") has a modified price (${formatCurrency(
-                it.finalUnitPrice
-              )} vs base ${formatCurrency(
-                it.basePrice
-              )}). A Price Adjustment Reason is strictly mandatory.`
-            );
-            return;
-          }
-        }
       }
     }
 
@@ -259,362 +230,175 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
         validUntil,
         notes: notes.trim() || undefined,
         status: submitStatus,
-        items: items.map((it) => ({
-          productServiceId: it.productServiceId,
-          itemName: it.itemName.trim(),
-          itemDescription: it.itemDescription?.trim() || undefined,
-          category: it.category?.trim() || "General",
-          itemType: it.itemType,
-          isCustom: it.isCustom,
-          quantity: it.quantity,
-          basePrice: it.basePrice,
-          finalUnitPrice: it.finalUnitPrice,
+        items: items.map((item) => ({
+          productServiceId: item.productServiceId,
+          itemName: item.itemName.trim(),
+          itemDescription: item.itemDescription?.trim() || undefined,
+          category: item.category?.trim() || "General",
+          itemType: item.itemType,
+          isCustom: item.isCustom,
+          quantity: item.quantity,
+          basePrice: item.basePrice,
+          finalUnitPrice: item.finalUnitPrice,
           priceAdjustmentReason:
-            Math.abs(it.finalUnitPrice - it.basePrice) > 0.001 ? it.priceAdjustmentReason?.trim() : null,
-          subtotal: it.subtotal,
+            item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001
+              ? item.priceAdjustmentReason?.trim() || null
+              : null,
+          subtotal: item.subtotal,
         })),
       };
-
       const created = await createQuotation(payload);
       onCreated(created);
       onClose();
-    } catch (err: any) {
-      console.error("Create quotation error:", err);
-      setFormError(err.message || "Failed to create quotation");
+      setStep(1);
+      setItems([]);
+      setCustomerName("");
+      setContactNumber("");
+      setNotes("");
+      setValidUntil(getDefaultValidityDate());
+      setFormError(null);
+    } catch (error: unknown) {
+      console.error("Create quotation error:", error);
+      setFormError(error instanceof Error ? error.message : "Failed to create quotation");
     } finally {
       setSaving(false);
     }
   };
 
+  const handleClose = () => {
+    if (saving) return;
+    setStep(1);
+    setFormError(null);
+    onClose();
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-2xl sm:p-7">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Create Enterprise Quotation</h2>
-              <span className="rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
-                Multi-Item Proposal
-              </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">Create Enterprise Quotation</h2>
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700">Multi-item proposal</span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Draft or send quotation proposals with reference base pricing snapshots and price adjustment governance.
-            </p>
+            <p className="mt-0.5 text-sm text-slate-500">Select catalog items and set pricing before adding customer details.</p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-          >
-            ✕
-          </button>
+          <button type="button" onClick={handleClose} disabled={saving} aria-label="Close quotation" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50">✕</button>
         </div>
 
-        {formError && (
-          <div className="mt-4 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {formError}
-          </div>
-        )}
-
-        {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-6 pr-1">
-          {/* Customer & Quote Meta */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
-            {/* Customer Name with Suggestion Box */}
-            <div className="relative" ref={customerContainerRef}>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Customer Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="e.g. Maria Santos"
-                  value={customerName}
-                  onChange={(e) => {
-                    setCustomerName(e.target.value);
-                    setShowCustomerSuggestions(true);
-                  }}
-                  onFocus={() => {
-                    if (customerName.trim()) setShowCustomerSuggestions(true);
-                  }}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
-                />
+        <div className="flex items-center gap-3 border-b border-slate-100 py-4">
+          {[["1", "Choose items"], ["2", "Quotation details"]].map(([number, label], index) => {
+            const active = step === index + 1;
+            const complete = step > index + 1;
+            return (
+              <div key={number} className="flex flex-1 items-center gap-3">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${active || complete ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-500"}`}>{complete ? <Check className="h-4 w-4" /> : number}</span>
+                <span className={`text-sm font-semibold ${active ? "text-sky-700" : "text-slate-500"}`}>{label}</span>
+                {index === 0 && <span className="h-px flex-1 bg-slate-200" />}
               </div>
-
-              {/* Suggestions dropdown */}
-              {showCustomerSuggestions && filteredCustomerSuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                  {filteredCustomerSuggestions.map((c, i) => (
-                    <button
-                      key={c.id || c.name}
-                      type="button"
-                      onClick={() => handleSelectCustomer(c)}
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-sky-50 flex items-center justify-between group"
-                    >
-                      <span className="font-semibold text-slate-800 group-hover:text-sky-700">{c.name}</span>
-                      {c.contactNumber && <span className="text-slate-400 text-[11px]">{c.contactNumber}</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Contact Number */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Contact Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="e.g. 0917-123-4567"
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
-                />
-              </div>
-            </div>
-
-            {/* Validity Date */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Valid Until <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="date"
-                  required
-                  value={validUntil}
-                  onChange={(e) => setValidUntil(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Line Items Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
-                Quotation Line Items ({items.length})
-              </h3>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
-              >
-                <Plus className="h-3.5 w-3.5 text-sky-600" />
-                Add Item
-              </button>
-            </div>
-
-            {items.map((item, index) => {
-              const isPriceAdjusted =
-                !item.isCustom && item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
-
-              return (
-                <div
-                  key={item.tempId}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3 relative group hover:border-slate-300 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400">
-                      #{index + 1}
-                    </span>
-
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={item.isCustom}
-                          onChange={(e) => handleToggleCustom(index, e.target.checked)}
-                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5"
-                        />
-                        <span>Custom Non-Catalog Item</span>
-                      </label>
-
-                      {items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(index)}
-                          className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
-                          title="Remove Item"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
-                    {/* Catalog Selection or Custom Item Name */}
-                    <div className="md:col-span-5">
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        {item.isCustom ? "Custom Item Name *" : "Select from Catalog *"}
-                      </label>
-                      {item.isCustom ? (
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Custom Acrylic Event Trophy"
-                          value={item.itemName}
-                          onChange={(e) => handleItemFieldChange(index, "itemName", e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                        />
-                      ) : (
-                        <select
-                          value={item.productServiceId || ""}
-                          onChange={(e) => handleCatalogSelection(index, e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
-                        >
-                          <option value="">-- Choose Catalog Product / Service --</option>
-                          {catalogItems.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              [{cat.type.toUpperCase()}] {cat.name} ({formatCurrency(cat.basePrice)})
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="md:col-span-2">
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={item.quantity}
-                        onChange={(e) => handleItemFieldChange(index, "quantity", parseInt(e.target.value) || 1)}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                      />
-                    </div>
-
-                    {/* Reference Base Price Snapshot */}
-                    <div className="md:col-span-2">
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Base Price
-                      </label>
-                      <div className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-mono font-medium text-slate-700">
-                        {item.isCustom ? "Custom" : formatCurrency(item.basePrice)}
-                      </div>
-                    </div>
-
-                    {/* Final Unit Price */}
-                    <div className="md:col-span-3">
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Final Unit Price (₱)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        value={item.finalUnitPrice}
-                        onChange={(e) =>
-                          handleItemFieldChange(index, "finalUnitPrice", parseFloat(e.target.value) || 0)
-                        }
-                        className={`w-full rounded-lg border px-3 py-1.5 text-xs font-mono font-semibold focus:outline-none focus:ring-1 ${
-                          isPriceAdjusted
-                            ? "border-amber-400 bg-amber-50/50 text-amber-900 focus:border-amber-500 focus:ring-amber-400"
-                            : "border-slate-200 text-slate-900 focus:border-sky-500 focus:ring-sky-500"
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mandatory Price Adjustment Reason */}
-                  {isPriceAdjusted && (
-                    <div className="rounded-lg bg-amber-50 p-2.5 border border-amber-200 animate-in fade-in duration-100">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 mb-1">
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                        Price Adjustment Reason (Mandatory)*
-                      </div>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Bulk discount 10%, rush fee, VIP partner rate, non-standard finishing..."
-                        value={item.priceAdjustmentReason || ""}
-                        onChange={(e) => handleItemFieldChange(index, "priceAdjustmentReason", e.target.value)}
-                        className="w-full rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs text-amber-900 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                      />
-                    </div>
-                  )}
-
-                  {/* Subtotal preview */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                    <span className="text-slate-500">
-                      {item.itemName || "Item"} × {item.quantity} units
-                    </span>
-                    <span className="font-mono font-bold text-slate-900">
-                      Subtotal: {formatCurrency(item.subtotal)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Notes & Terms */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Quotation Notes & Scope of Work</label>
-            <textarea
-              rows={2}
-              placeholder="Terms, delivery conditions, artwork approval timeline, payment stipulations..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            />
-          </div>
+            );
+          })}
         </div>
 
-        {/* Footer / Action Controls */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-xs text-slate-500">Total Quantity:</span>
-              <span className="ml-1 text-sm font-bold text-slate-800">{totalQuotationQuantity}</span>
-            </div>
-            <div>
-              <span className="text-xs text-slate-500">Quotation Total:</span>
-              <span className="ml-1.5 text-base font-mono font-extrabold text-sky-700">
-                {formatCurrency(totalQuotationAmount)}
-              </span>
-            </div>
-          </div>
+        {formError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"><AlertCircle className="h-4 w-4 shrink-0" />{formError}</div>}
+        {dependencyError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"><AlertCircle className="h-4 w-4 shrink-0" />{dependencyError}</div>}
 
-          <div className="flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSubmit("draft")}
-              disabled={saving}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm disabled:opacity-50"
-            >
-              <Save className="h-3.5 w-3.5 text-slate-500" />
-              Save as Draft
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSubmit("sent")}
-              disabled={saving}
-              className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
-            >
-              <Send className="h-3.5 w-3.5" />
-              {saving ? "Processing..." : "Save & Send Quotation"}
-            </button>
-          </div>
+        <div className="min-h-0 flex-1 overflow-y-auto py-5">
+          {step === 1 ? (
+            <div className="space-y-6">
+              <CatalogShoppingGrid items={catalogItems} loading={loadingCatalog} cartCounts={cartCounts} onAdd={handleAddCatalogItem} />
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-slate-900">Your cart <span className="text-slate-400">({items.length})</span></h3>
+                    <p className="text-xs text-slate-500">Confirm quantities, adjusted prices, and reasons before continuing.</p>
+                  </div>
+                  <button type="button" onClick={() => setItems((prev) => [...prev, makeCartItem()])} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"><Plus className="h-3.5 w-3.5" />Add custom item</button>
+                </div>
+                {items.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">Your cart is empty. Add a product or service to begin.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {items.map((item) => {
+                      const catalogItem = catalogItems.find((catalog) => catalog.id === item.productServiceId);
+                      const adjusted = !item.isCustom && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
+                      return (
+                        <div key={item.tempId} className="grid gap-4 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-[88px_minmax(0,1fr)_auto]">
+                          <div className="h-20 w-full overflow-hidden rounded-lg bg-slate-100 sm:w-[88px]">
+                            {catalogItem?.imageUrl ? <img src={catalogItem.imageUrl} alt={item.itemName} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-6 w-6" /></div>}
+                          </div>
+                          <div className="min-w-0 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                {item.isCustom ? (
+                                  <div className="space-y-2">
+                                    <input value={item.itemName} onChange={(event) => handleChangeItem(item.tempId, "itemName", event.target.value)} placeholder="Custom item name" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold" />
+                                    <select value={item.category || "General"} onChange={(event) => handleChangeItem(item.tempId, "category", event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
+                                      {CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+                                    </select>
+                                  </div>
+                                ) : <p className="font-semibold text-slate-900">{item.itemName}</p>}
+                                <p className="mt-1 text-xs text-slate-500">{item.isCustom ? "Custom item" : <>{item.itemType === "service" && <Briefcase className="mr-1 inline h-3 w-3" />}{item.itemType === "service" ? "Service" : "Product"} · Base {formatCurrency(item.basePrice)}</>}</p>
+                              </div>
+                              <button type="button" onClick={() => setItems((prev) => prev.filter((line) => line.tempId !== item.tempId))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${item.itemName || "custom item"}`}><Trash2 className="h-4 w-4" /></button>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                              <label className="text-xs font-semibold text-slate-600">Quantity<input type="number" min="1" value={item.quantity} onChange={(event) => handleChangeItem(item.tempId, "quantity", event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+                              <label className="text-xs font-semibold text-slate-600">Final unit price<input type="number" min="0" step="0.01" value={item.finalUnitPrice} onChange={(event) => handleChangeItem(item.tempId, "finalUnitPrice", event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm ${adjusted ? "border-amber-400 bg-amber-50" : "border-slate-200"}`} /></label>
+                              <div className="text-xs font-semibold text-slate-600">Subtotal<p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-900">{formatCurrency(item.subtotal)}</p></div>
+                            </div>
+                            {adjusted && <label className="block text-xs font-semibold text-amber-800">Price adjustment reason<input value={item.priceAdjustmentReason || ""} onChange={(event) => handleChangeItem(item.tempId, "priceAdjustmentReason", event.target.value)} placeholder="Required when price differs from catalog price" className="mt-1 w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" /></label>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="space-y-5">
+                <div ref={customerContainerRef} className="relative">
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">Customer name <span className="text-rose-500">*</span></label>
+                  <div className="relative"><User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input ref={customerNameRef} value={customerName} onChange={(event) => { setCustomerName(event.target.value); setShowCustomerSuggestions(true); }} onFocus={() => customerName.trim() && setShowCustomerSuggestions(true)} placeholder="e.g. Maria Santos" className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" /></div>
+                  {showCustomerSuggestions && filteredCustomerSuggestions.length > 0 && <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">{filteredCustomerSuggestions.map((customer) => <button key={customer.id || customer.name} type="button" onClick={() => handleSelectCustomer(customer)} className="flex w-full justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-sky-50"><span>{customer.name}</span><span className="text-xs text-slate-400">{customer.contactNumber}</span></button>)}</div>}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">Contact number</label>
+                  <div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="e.g. 0917-123-4567" className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" /></div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">Valid until <span className="text-rose-500">*</span></label>
+                  <div className="relative"><Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="date" value={validUntil} onChange={(event) => setValidUntil(event.target.value)} className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" /></div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">Quotation notes & scope of work</label>
+                  <textarea rows={4} placeholder="Terms, delivery conditions, artwork approval timeline, payment stipulations..." value={notes} onChange={(event) => setNotes(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                </div>
+              </div>
+              <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="font-bold text-slate-900">Quotation summary</h3>
+                <div className="mt-3 space-y-2 border-b border-slate-200 pb-3">
+                  {items.map((item) => <div key={item.tempId} className="flex justify-between gap-3 text-xs"><span className="line-clamp-1 text-slate-600">{item.quantity} × {item.itemName}</span><span className="shrink-0 font-semibold text-slate-800">{formatCurrency(item.subtotal)}</span></div>)}
+                </div>
+                <div className="mt-3 flex justify-between text-sm font-bold"><span>Total</span><span>{formatCurrency(totalQuotationAmount)}</span></div>
+                <p className="mt-1 text-xs text-slate-500">{totalQuotationQuantity} total units</p>
+                <button type="button" onClick={() => setStep(1)} className="mt-4 text-xs font-semibold text-sky-700 hover:text-sky-800">← Back to cart</button>
+              </aside>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div><span className="text-xs text-slate-500">{totalQuotationQuantity} total units · Quotation total</span><p className="font-mono text-lg font-extrabold text-sky-700">{formatCurrency(totalQuotationAmount)}</p></div>
+          {step === 1 ? (
+            <div className="flex justify-end gap-2"><button type="button" onClick={handleClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="button" onClick={handleContinue} disabled={loadingCatalog || Boolean(dependencyError)} className="rounded-xl bg-sky-600 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50">Continue to quotation details →</button></div>
+          ) : (
+            <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={handleClose} disabled={saving} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="button" onClick={() => handleSubmit("draft")} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Save className="h-4 w-4" />Save draft</button><button type="button" onClick={() => handleSubmit("sent")} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50"><Send className="h-4 w-4" />{saving ? "Processing..." : "Save & send"}</button></div>
+          )}
         </div>
       </div>
     </div>
