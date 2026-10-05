@@ -1,4 +1,5 @@
-import { Briefcase, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Briefcase, ChevronLeft, ChevronRight, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
 import type { CatalogItem } from "@/types";
 import { CATEGORIES } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -51,6 +52,14 @@ export default function ShoppingCartPanel({
   className,
   onClose,
 }: ShoppingCartPanelProps) {
+  const [page, setPage] = useState(1);
+  const pageSize = 1;
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
   return (
     <section className={cn("flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm", className)}>
       <div className="flex items-start justify-between gap-2 border-b border-slate-100 p-4">
@@ -75,13 +84,13 @@ export default function ShoppingCartPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 space-y-3 p-3">
         {items.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-slate-500">
             {emptyMessage}
           </p>
         ) : (
-          items.map((item) => {
+          items.slice((page - 1) * pageSize, page * pageSize).map((item) => {
             const catalogItem = catalogItems.find((catalog) => catalog.id === item.productServiceId);
             const adjusted = !item.isCustom && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
             return (
@@ -174,6 +183,18 @@ export default function ShoppingCartPanel({
               </article>
             );
           })
+        )}
+        {items.length > pageSize && (
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[11px] text-slate-500">
+              Items {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, items.length)} of {items.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} aria-label="Previous cart page" className="rounded-md border border-slate-200 p-1 text-slate-600 disabled:opacity-40"><ChevronLeft className="h-3.5 w-3.5" /></button>
+              <span className="text-[11px] text-slate-600">{page}/{pageCount}</span>
+              <button type="button" onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page === pageCount} aria-label="Next cart page" className="rounded-md border border-slate-200 p-1 text-slate-600 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
         )}
       </div>
 

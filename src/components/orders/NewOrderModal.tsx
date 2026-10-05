@@ -270,9 +270,10 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       title="New Direct Order"
       subtitle="Build the customer's cart first, then enter the order details."
       wide
+      fullScreen
     >
-      <div className="space-y-5">
-        <div className="flex items-center gap-3">
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {[["1", "Choose items"], ["2", "Order details"]].map(([number, label], index) => {
             const active = step === index + 1;
             const complete = step > index + 1;
@@ -296,8 +297,8 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
         )}
 
         {step === 1 ? (
-          <div className="space-y-4 lg:grid lg:h-[calc(94vh-290px)] lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
-            <div className="min-h-0 lg:overflow-y-auto lg:pr-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1 lg:flex-none">
               <CatalogShoppingGrid
                 items={catalogItems}
                 loading={loadingCatalog}
@@ -307,6 +308,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
             </div>
             <div className="hidden min-h-0 lg:block">
               <ShoppingCartPanel
+                className="h-full"
                 items={items}
                 catalogItems={catalogItems}
                 totalQuantity={totalQuantity}
@@ -411,8 +413,8 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
             )}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="space-y-5">
                 <div ref={customerContainerRef} className="relative">
                   <Field label="Customer name">

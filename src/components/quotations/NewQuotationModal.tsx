@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   Briefcase,
@@ -86,6 +87,18 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
         setDependencyError(error instanceof Error ? error.message : "Could not load the catalog and customer list.");
       })
       .finally(() => setLoadingCatalog(false));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -278,10 +291,10 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-2xl sm:p-7">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid h-dvh w-screen place-items-center overflow-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
+      <div className="relative z-10 flex h-full w-full max-w-none flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-2xl sm:p-6">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold tracking-tight text-slate-900">Create Enterprise Quotation</h2>
@@ -292,7 +305,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
           <button type="button" onClick={handleClose} disabled={saving} aria-label="Close quotation" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50">✕</button>
         </div>
 
-        <div className="flex items-center gap-3 border-b border-slate-100 py-4">
+        <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 py-3">
           {[["1", "Choose items"], ["2", "Quotation details"]].map(([number, label], index) => {
             const active = step === index + 1;
             const complete = step > index + 1;
@@ -309,14 +322,15 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
         {formError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"><AlertCircle className="h-4 w-4 shrink-0" />{formError}</div>}
         {dependencyError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"><AlertCircle className="h-4 w-4 shrink-0" />{dependencyError}</div>}
 
-        <div className="min-h-0 flex-1 overflow-y-auto py-5">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden py-3">
           {step === 1 ? (
-            <div className="space-y-4 lg:grid lg:h-[calc(94vh-310px)] lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
-              <div className="min-h-0 lg:overflow-y-auto lg:pr-2">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1 lg:flex-none">
                 <CatalogShoppingGrid items={catalogItems} loading={loadingCatalog} cartCounts={cartCounts} onAdd={handleAddCatalogItem} />
               </div>
               <div className="hidden min-h-0 lg:block">
                 <ShoppingCartPanel
+                  className="h-full"
                   items={items}
                   catalogItems={catalogItems}
                   totalQuantity={totalQuotationQuantity}
@@ -408,7 +422,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
               )}
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="space-y-5">
                 <div ref={customerContainerRef} className="relative">
                   <label className="mb-1 block text-sm font-semibold text-slate-700">Customer name <span className="text-rose-500">*</span></label>
@@ -448,6 +462,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
