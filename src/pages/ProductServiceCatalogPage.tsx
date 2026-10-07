@@ -366,7 +366,7 @@ export default function ProductServiceCatalogPage() {
             No catalog items found matching your filters.
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {filteredItems.map((item) => (
               <article key={item.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="relative aspect-[16/10] bg-slate-100">

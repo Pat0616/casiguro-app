@@ -130,7 +130,7 @@ export default function CatalogShoppingGrid({
           <p className="mt-1 text-xs text-slate-500">Try another search or item type.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {filteredItems.map((item) => {
             const count = cartCounts[item.id] || 0;
             return (
@@ -158,7 +158,7 @@ export default function CatalogShoppingGrid({
                 </div>
                 <div className="space-y-2 p-3">
                   <div className="min-h-10">
-                    <h4 className="line-clamp-2 text-xs font-bold text-slate-900">{item.name}</h4>
+                    <h4 className="line-clamp-2 text-sm font-extrabold text-slate-900">{item.name}</h4>
                     <p className="mt-0.5 text-[11px] text-slate-500">{item.categoryName || "General"}</p>
                   </div>
                   <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2">

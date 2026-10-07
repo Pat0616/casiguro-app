@@ -53,7 +53,7 @@ export default function ShoppingCartPanel({
   onClose,
 }: ShoppingCartPanelProps) {
   const [page, setPage] = useState(1);
-  const pageSize = 1;
+  const pageSize = 7;
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
 
   useEffect(() => {
@@ -84,17 +84,18 @@ export default function ShoppingCartPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 p-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
         {items.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-slate-500">
             {emptyMessage}
           </p>
         ) : (
-          items.slice((page - 1) * pageSize, page * pageSize).map((item) => {
-            const catalogItem = catalogItems.find((catalog) => catalog.id === item.productServiceId);
-            const adjusted = !item.isCustom && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
-            return (
-              <article key={item.tempId} className="rounded-xl border border-slate-200 p-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+            {items.slice((page - 1) * pageSize, page * pageSize).map((item) => {
+              const catalogItem = catalogItems.find((catalog) => catalog.id === item.productServiceId);
+              const adjusted = !item.isCustom && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
+              return (
+                <article key={item.tempId} className="rounded-xl border border-slate-200 p-3">
                 <div className="flex gap-3">
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                     {catalogItem?.imageUrl ? (
@@ -110,11 +111,11 @@ export default function ShoppingCartPanel({
                           value={item.itemName}
                           onChange={(event) => onChange(item.tempId, "itemName", event.target.value)}
                           placeholder="Custom item name"
-                          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-semibold"
+                          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-bold"
                         />
                       ) : (
                         <div className="min-w-0">
-                          <p className="line-clamp-2 text-sm font-semibold text-slate-900">{item.itemName}</p>
+                          <p className="line-clamp-2 text-base font-bold text-slate-900">{item.itemName}</p>
                           <p className="mt-0.5 text-[11px] text-slate-500">
                             {item.itemType === "service" && <Briefcase className="mr-1 inline h-3 w-3" />}
                             {item.itemType === "service" ? "Service" : "Product"} · Base {formatCurrency(item.basePrice)}
@@ -180,9 +181,10 @@ export default function ShoppingCartPanel({
                   <span className="text-slate-500">{item.quantity} × {formatCurrency(item.finalUnitPrice)}</span>
                   <span className="font-bold text-slate-900">{formatCurrency(item.subtotal)}</span>
                 </div>
-              </article>
-            );
-          })
+                </article>
+              );
+            })}
+          </div>
         )}
         {items.length > pageSize && (
           <div className="flex items-center justify-between pt-1">
