@@ -42,6 +42,10 @@ export function updateCatalogItem(id: string, payload: Partial<CatalogItemPayloa
   });
 }
 
+export function deleteCatalogItem(id: string): Promise<{ id: string; message: string }> {
+  return apiRequest(`/api/catalog/${id}`, { method: "DELETE" });
+}
+
 export function toggleCatalogItemStatus(id: string, isActive?: boolean): Promise<{ id: string; isActive: boolean; message: string }> {
   return apiRequest(`/api/catalog/${id}/status`, {
     method: "PATCH",

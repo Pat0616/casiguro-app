@@ -4,6 +4,7 @@ import {
   Plus,
   Search,
   Edit2,
+  Trash2,
   CheckCircle,
   XCircle,
   Tag,
@@ -19,6 +20,7 @@ import {
   getCatalogItems,
   createCatalogItem,
   updateCatalogItem,
+  deleteCatalogItem,
   toggleCatalogItemStatus,
   type CatalogItemPayload,
 } from "@/utils/catalogAPI";
@@ -55,6 +57,7 @@ export default function ProductServiceCatalogPage() {
   const [formCategoryName, setFormCategoryName] = useState("Apparel");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const availableCategories = Array.from(
     new Set([
@@ -209,6 +212,24 @@ export default function ProductServiceCatalogPage() {
     } catch (err: unknown) {
       console.error("Toggle status error:", err);
       alert(`Failed to update status: ${err instanceof Error ? err.message : "Error"}`);
+    }
+  };
+
+  const handleDeleteItem = async (item: CatalogItem) => {
+    const confirmed = window.confirm(
+      `Delete "${item.name}" from the catalog? Existing quotations and orders will retain their saved item details.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingItemId(item.id);
+      await deleteCatalogItem(item.id);
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
+    } catch (err: unknown) {
+      console.error("Delete catalog item error:", err);
+      alert(`Failed to delete item: ${err instanceof Error ? err.message : "Error"}`);
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
@@ -441,6 +462,7 @@ export default function ProductServiceCatalogPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenEditModal(item)}
+                        disabled={deletingItemId === item.id}
                         className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                         title="Edit Item"
                         aria-label={`Edit ${item.name}`}
@@ -449,6 +471,7 @@ export default function ProductServiceCatalogPage() {
                       </button>
                       <button
                         onClick={() => handleToggleStatus(item)}
+                        disabled={deletingItemId === item.id}
                         className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
                           item.isActive
                             ? "border-slate-200 text-slate-600 hover:bg-slate-100"
@@ -456,6 +479,17 @@ export default function ProductServiceCatalogPage() {
                         }`}
                       >
                         {item.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item)}
+                        disabled={deletingItemId === item.id}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-50"
+                        title="Delete Item"
+                        aria-label={`Delete ${item.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {deletingItemId === item.id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>
