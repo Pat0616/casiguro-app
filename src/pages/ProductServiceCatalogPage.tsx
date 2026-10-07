@@ -58,6 +58,8 @@ export default function ProductServiceCatalogPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CatalogItem | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const availableCategories = Array.from(
     new Set([
@@ -215,19 +217,17 @@ export default function ProductServiceCatalogPage() {
     }
   };
 
-  const handleDeleteItem = async (item: CatalogItem) => {
-    const confirmed = window.confirm(
-      `Delete "${item.name}" from the catalog? Existing quotations and orders will retain their saved item details.`
-    );
-    if (!confirmed) return;
-
+  const handleDeleteItem = async () => {
+    if (!deleteTarget) return;
     try {
-      setDeletingItemId(item.id);
-      await deleteCatalogItem(item.id);
-      setItems((current) => current.filter((entry) => entry.id !== item.id));
+      setDeletingItemId(deleteTarget.id);
+      setDeleteError(null);
+      await deleteCatalogItem(deleteTarget.id);
+      setItems((current) => current.filter((entry) => entry.id !== deleteTarget.id));
+      setDeleteTarget(null);
     } catch (err: unknown) {
       console.error("Delete catalog item error:", err);
-      alert(`Failed to delete item: ${err instanceof Error ? err.message : "Error"}`);
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete item.");
     } finally {
       setDeletingItemId(null);
     }
@@ -482,7 +482,10 @@ export default function ProductServiceCatalogPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDeleteItem(item)}
+                        onClick={() => {
+                          setDeleteError(null);
+                          setDeleteTarget(item);
+                        }}
                         disabled={deletingItemId === item.id}
                         className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-50"
                         title="Delete Item"
@@ -499,6 +502,83 @@ export default function ProductServiceCatalogPage() {
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deletingItemId) {
+              setDeleteTarget(null);
+              setDeleteError(null);
+            }
+          }}
+        >
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-catalog-item-title"
+            aria-describedby="delete-catalog-item-description"
+            className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                <Trash2 className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="delete-catalog-item-title" className="text-lg font-bold text-slate-900">
+                  Delete catalog item?
+                </h2>
+                <p id="delete-catalog-item-description" className="mt-1 text-sm text-slate-600">
+                  Remove <span className="font-semibold text-slate-900">{deleteTarget.name}</span> from the catalog?
+                  Existing quotations and orders will keep their saved item details.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError(null);
+                }}
+                disabled={Boolean(deletingItemId)}
+                aria-label="Close delete confirmation"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {deleteError && (
+              <div role="alert" className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError(null);
+                }}
+                disabled={Boolean(deletingItemId)}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteItem}
+                disabled={Boolean(deletingItemId)}
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletingItemId ? "Deleting..." : "Delete item"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
