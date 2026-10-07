@@ -178,6 +178,9 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{item.itemName}</span>
+                        {item.selectedVariant && (
+                          <span className="ml-2 text-xs font-semibold text-sky-700">Option: {item.selectedVariant}</span>
+                        )}
                         <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                           {item.itemType === "service" ? (
                             <Briefcase className="h-3 w-3 text-sky-600" />

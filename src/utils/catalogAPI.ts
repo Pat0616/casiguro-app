@@ -1,11 +1,12 @@
 // casiguro-app/src/utils/catalogAPI.ts
 import { apiRequest } from "./RestAPI";
-import type { CatalogItem, CatalogItemType } from "@/types";
+import type { CatalogItem, CatalogItemType, CatalogItemVariant } from "@/types";
 
 export interface CatalogItemPayload {
   name: string;
   type: CatalogItemType;
   basePrice: number;
+  variants?: CatalogItemVariant[];
   description?: string;
   imageUrl?: string | null;
   categoryId?: string | null;

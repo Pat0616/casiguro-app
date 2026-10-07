@@ -16,12 +16,18 @@ export type CustomerPaymentFilter = "all" | "unpaid" | "partial" | "paid";
 export type CatalogItemType = "product" | "service";
 export type QuotationStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
 
+export interface CatalogItemVariant {
+  name: string;
+  price: number;
+}
+
 export interface CatalogItem {
   id: string;
   name: string;
   type: CatalogItemType;
   basePrice: number;
   defaultUnitPrice?: number;
+  variants?: CatalogItemVariant[];
   description: string;
   imageUrl?: string | null;
   isStockItem: boolean;
@@ -39,6 +45,7 @@ export interface QuotationItem {
   itemName: string;
   itemDescription?: string;
   category?: string;
+  selectedVariant?: string | null;
   itemType: CatalogItemType;
   isCustom: boolean;
   quantity: number;
@@ -74,6 +81,7 @@ export interface OrderItem {
   itemName: string;
   itemDescription?: string;
   category?: string;
+  selectedVariant?: string | null;
   itemType: CatalogItemType;
   isCustom: boolean;
   quantity: number;

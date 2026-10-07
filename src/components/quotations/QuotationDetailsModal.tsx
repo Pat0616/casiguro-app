@@ -296,6 +296,9 @@ export default function QuotationDetailsModal({
                       <tr key={it.id || idx} className="hover:bg-slate-50/50">
                         <td className="px-4 py-3">
                           <div className="font-semibold text-slate-900">{it.itemName}</div>
+                          {it.selectedVariant && (
+                            <div className="text-[11px] font-semibold text-sky-700">Option: {it.selectedVariant}</div>
+                          )}
                           {it.itemDescription && (
                             <div className="text-[11px] text-slate-500 mt-0.5">{it.itemDescription}</div>
                           )}
@@ -516,4 +519,3 @@ export default function QuotationDetailsModal({
     </div>
   );
 }
-

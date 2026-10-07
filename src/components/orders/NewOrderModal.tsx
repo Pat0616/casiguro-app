@@ -34,6 +34,7 @@ interface OrderLineItem {
   productServiceId: string | null;
   itemName: string;
   itemDescription: string;
+  selectedVariant: string | null;
   category: string;
   itemType: "product" | "service";
   isCustom: boolean;
@@ -49,6 +50,7 @@ const makeEmptyItem = (): OrderLineItem => ({
   productServiceId: null,
   itemName: "",
   itemDescription: "",
+  selectedVariant: null,
   category: "General",
   itemType: "product",
   isCustom: true,
@@ -140,10 +142,12 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
     setShowCustomerSuggestions(false);
   };
 
-  const handleAddCatalogItem = (catalogItem: CatalogItem) => {
-    const basePrice = Number(catalogItem.basePrice || catalogItem.defaultUnitPrice || 0);
+  const handleAddCatalogItem = (catalogItem: CatalogItem, variant?: { name: string; price: number }) => {
+    const basePrice = Number(variant?.price ?? catalogItem.basePrice ?? catalogItem.defaultUnitPrice ?? 0);
     setItems((prev) => {
-      const existingIndex = prev.findIndex((item) => item.productServiceId === catalogItem.id);
+      const existingIndex = prev.findIndex(
+        (item) => item.productServiceId === catalogItem.id && item.selectedVariant === (variant?.name || null)
+      );
       if (existingIndex >= 0) {
         return prev.map((item, index) =>
           index === existingIndex
@@ -158,6 +162,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
           productServiceId: catalogItem.id,
           itemName: catalogItem.name,
           itemDescription: catalogItem.description || "",
+          selectedVariant: variant?.name || null,
           category: catalogItem.categoryName || "General",
           itemType: catalogItem.type,
           isCustom: false,
@@ -222,6 +227,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       productServiceId: item.productServiceId,
       itemName: item.itemName.trim(),
       itemDescription: item.itemDescription.trim() || undefined,
+      selectedVariant: item.selectedVariant,
       category: item.category.trim() || "General",
       itemType: item.itemType,
       isCustom: item.isCustom,
@@ -356,6 +362,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                               ) : (
                                 <p className="font-semibold text-slate-900">{item.itemName}</p>
                               )}
+                              {item.selectedVariant && <p className="mt-0.5 text-xs font-semibold text-sky-700">Option: {item.selectedVariant}</p>}
                               <p className="mt-1 text-xs text-slate-500">{item.isCustom ? "Custom item" : `${item.itemType === "service" ? "Service" : "Product"} · Base ${formatCurrency(item.basePrice)}`}</p>
                             </div>
                             <button type="button" onClick={() => setItems((prev) => prev.filter((line) => line.tempId !== item.tempId))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${item.itemName || "custom item"}`}><Trash2 className="h-4 w-4" /></button>
@@ -458,7 +465,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
               <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="font-bold text-slate-900">Order summary</h3>
                 <div className="mt-3 space-y-2 border-b border-slate-200 pb-3">
-                  {items.map((item) => <div key={item.tempId} className="flex justify-between gap-3 text-xs"><span className="line-clamp-1 text-slate-600">{item.quantity} × {item.itemName}</span><span className="shrink-0 font-semibold text-slate-800">{formatCurrency(item.subtotal)}</span></div>)}
+                  {items.map((item) => <div key={item.tempId} className="flex justify-between gap-3 text-xs"><span className="line-clamp-1 text-slate-600">{item.quantity} × {item.itemName}{item.selectedVariant ? ` (${item.selectedVariant})` : ""}</span><span className="shrink-0 font-semibold text-slate-800">{formatCurrency(item.subtotal)}</span></div>)}
                 </div>
                 <div className="mt-3 flex justify-between text-sm font-bold"><span>Total</span><span>{formatCurrency(totalOrderAmount)}</span></div>
                 <p className="mt-1 text-xs text-slate-500">{totalQuantity} total units</p>

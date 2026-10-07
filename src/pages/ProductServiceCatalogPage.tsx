@@ -45,6 +45,7 @@ export default function ProductServiceCatalogPage() {
     name: "",
     type: "product",
     basePrice: 0,
+    variants: [],
     description: "",
     imageUrl: null,
     categoryId: null,
@@ -89,6 +90,7 @@ export default function ProductServiceCatalogPage() {
       name: "",
       type: "product",
       basePrice: 0,
+      variants: [],
       description: "",
       imageUrl: null,
       categoryId: null,
@@ -106,6 +108,7 @@ export default function ProductServiceCatalogPage() {
       name: item.name,
       type: item.type,
       basePrice: item.basePrice,
+      variants: item.variants || [],
       description: item.description || "",
       imageUrl: item.imageUrl || null,
       categoryId: item.categoryId || null,
@@ -154,6 +157,23 @@ export default function ProductServiceCatalogPage() {
     if (formData.basePrice < 0) {
       setFormError("Base price cannot be negative.");
       return;
+    }
+    const variantNames = new Set<string>();
+    for (const [index, variant] of (formData.variants || []).entries()) {
+      const name = variant.name.trim();
+      if (!name) {
+        setFormError(`Enter a name for option #${index + 1}.`);
+        return;
+      }
+      if (!Number.isFinite(variant.price) || variant.price < 0) {
+        setFormError(`Enter a valid non-negative price for ${name}.`);
+        return;
+      }
+      if (variantNames.has(name.toLowerCase())) {
+        setFormError(`Option "${name}" is listed more than once.`);
+        return;
+      }
+      variantNames.add(name.toLowerCase());
     }
 
     try {
@@ -409,7 +429,14 @@ export default function ProductServiceCatalogPage() {
                   <div className="flex items-end justify-between border-t border-slate-100 pt-3">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Base reference price</p>
-                      <p className="mt-0.5 font-mono text-lg font-bold text-slate-900">{formatCurrency(item.basePrice)}</p>
+                      <p className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        {item.variants?.length
+                          ? `From ${formatCurrency(Math.min(...item.variants.map((variant) => variant.price)))}`
+                          : formatCurrency(item.basePrice)}
+                      </p>
+                      {Boolean(item.variants?.length) && (
+                        <p className="text-[11px] text-slate-500">{item.variants?.length} priced options</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -442,7 +469,7 @@ export default function ProductServiceCatalogPage() {
       {/* Add / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+          <div className="my-4 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
             <h2 className="text-lg font-bold text-slate-900">
               {editingItem ? "Edit Catalog Item" : "Add Catalog Item"}
             </h2>
@@ -531,6 +558,77 @@ export default function ProductServiceCatalogPage() {
               </div>
 
               <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700">Priced options</label>
+                    <p className="mt-0.5 text-[11px] text-slate-400">Optional sizes or dimensions with their own prices.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((current) => ({
+                        ...current,
+                        variants: [...(current.variants || []), { name: "", price: 0 }],
+                      }))
+                    }
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"
+                  >
+                    Add option
+                  </button>
+                </div>
+                {(formData.variants || []).map((variant, index) => (
+                  <div key={index} className="mb-2 grid grid-cols-[minmax(0,1fr)_120px_auto] items-center gap-2">
+                    <input
+                      value={variant.name}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          variants: (current.variants || []).map((option, optionIndex) =>
+                            optionIndex === index ? { ...option, name: event.target.value } : option
+                          ),
+                        }))
+                      }
+                      aria-label={`Option ${index + 1} name`}
+                      placeholder="e.g. Small or 4×6"
+                      className="min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={variant.price}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          variants: (current.variants || []).map((option, optionIndex) =>
+                            optionIndex === index
+                              ? { ...option, price: Number(event.target.value) || 0 }
+                              : option
+                          ),
+                        }))
+                      }
+                      aria-label={`Option ${index + 1} price`}
+                      placeholder="Price"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((current) => ({
+                          ...current,
+                          variants: (current.variants || []).filter((_, optionIndex) => optionIndex !== index),
+                        }))
+                      }
+                      aria-label={`Remove option ${index + 1}`}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Base Reference Price (₱) <span className="text-rose-500">*</span>
                 </label>
@@ -545,7 +643,7 @@ export default function ProductServiceCatalogPage() {
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Acts as the baseline price snapshot. Employees must provide a reason if altering this price in quotations.
+                  Used when no priced options are configured. Selected option prices are used in quotations and orders.
                 </p>
               </div>
 

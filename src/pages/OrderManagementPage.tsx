@@ -281,7 +281,7 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
                         <td className="px-6 py-4">
                           <div className="text-xs text-slate-800 line-clamp-1">
                             {q.items && q.items.length > 0
-                              ? q.items.map((it) => `${it.itemName} (×${it.quantity})`).join(", ")
+                              ? q.items.map((it) => `${it.itemName}${it.selectedVariant ? ` (${it.selectedVariant})` : ""} (×${it.quantity})`).join(", ")
                               : "No items"}
                           </div>
                           <span className="text-[11px] text-slate-400">

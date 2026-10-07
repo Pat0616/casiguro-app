@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { Briefcase, Image as ImageIcon, Plus, Search, ShoppingBag } from "lucide-react";
-import type { CatalogItem, CatalogItemType } from "@/types";
+import type { CatalogItem, CatalogItemType, CatalogItemVariant } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 
 interface CatalogShoppingGridProps {
   items: CatalogItem[];
   loading: boolean;
   cartCounts: Record<string, number>;
-  onAdd: (item: CatalogItem) => void;
+  onAdd: (item: CatalogItem, variant?: CatalogItemVariant) => void;
 }
 
 export default function CatalogShoppingGrid({
@@ -19,6 +19,7 @@ export default function CatalogShoppingGrid({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | CatalogItemType>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const categories = useMemo(
     () =>
       Array.from(
@@ -133,6 +134,8 @@ export default function CatalogShoppingGrid({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {filteredItems.map((item) => {
             const count = cartCounts[item.id] || 0;
+            const variants = item.variants || [];
+            const selectedVariant = variants.find((variant) => variant.name === selectedVariants[item.id]);
             return (
               <article
                 key={item.id}
@@ -161,12 +164,32 @@ export default function CatalogShoppingGrid({
                     <h4 className="line-clamp-2 text-sm font-extrabold text-slate-900">{item.name}</h4>
                     <p className="mt-0.5 text-[11px] text-slate-500">{item.categoryName || "General"}</p>
                   </div>
+                  {variants.length > 0 && (
+                    <select
+                      aria-label={`Select option for ${item.name}`}
+                      value={selectedVariant?.name || ""}
+                      onChange={(event) =>
+                        setSelectedVariants((current) => ({ ...current, [item.id]: event.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    >
+                      <option value="">Select option</option>
+                      {variants.map((variant) => (
+                        <option key={variant.name} value={variant.name}>
+                          {variant.name} — {formatCurrency(variant.price)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-                    <span className="font-mono text-xs font-bold text-slate-900">{formatCurrency(item.basePrice)}</span>
+                    <span className="font-mono text-xs font-bold text-slate-900">
+                      {formatCurrency(selectedVariant?.price ?? item.basePrice)}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => onAdd(item)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-sky-700"
+                      onClick={() => onAdd(item, selectedVariant)}
+                      disabled={variants.length > 0 && !selectedVariant}
+                      className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Plus className="h-3 w-3" />
                       Add

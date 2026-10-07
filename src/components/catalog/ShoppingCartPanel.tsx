@@ -10,6 +10,7 @@ export interface ShoppingCartLine {
   itemName: string;
   itemDescription?: string;
   category?: string;
+  selectedVariant?: string | null;
   itemType: "product" | "service";
   isCustom: boolean;
   quantity: number;
@@ -116,6 +117,9 @@ export default function ShoppingCartPanel({
                       ) : (
                         <div className="min-w-0">
                           <p className="line-clamp-2 text-base font-bold text-slate-900">{item.itemName}</p>
+                          {item.selectedVariant && (
+                            <p className="mt-0.5 text-xs font-semibold text-sky-700">Option: {item.selectedVariant}</p>
+                          )}
                           <p className="mt-0.5 text-[11px] text-slate-500">
                             {item.itemType === "service" && <Briefcase className="mr-1 inline h-3 w-3" />}
                             {item.itemType === "service" ? "Service" : "Product"} · Base {formatCurrency(item.basePrice)}
