@@ -475,7 +475,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
 
             <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
               <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
-              <Button type="submit"><Plus className="h-4 w-4" /> Confirm & forward to production</Button>
+              <Button type="submit"><Plus className="h-4 w-4" /> {orderType === "stock" ? "Complete stock order" : "Confirm & forward to production"}</Button>
             </div>
           </form>
         )}
