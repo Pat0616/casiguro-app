@@ -11,8 +11,8 @@ import {
   Boxes,
   Briefcase,
   AlertCircle,
-  ImagePlus,
   Image as ImageIcon,
+  Loader2,
   X,
 } from "lucide-react";
 import type { CatalogItem, CatalogItemType } from "@/types";
@@ -26,6 +26,9 @@ import {
 } from "@/utils/catalogAPI";
 import { CATEGORIES } from "@/lib/constants";
 import { uploadImageToCloudinary } from "@/utils/CloudinaryAPI";
+import { cn } from "@/lib/utils";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // Cloudinary free-plan image limit
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -61,6 +64,7 @@ export default function ProductServiceCatalogPage() {
   const [deleteTarget, setDeleteTarget] = useState<CatalogItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
+  const [imageDragActive, setImageDragActive] = useState(false);
   const availableCategories = Array.from(
     new Set([
       ...items
@@ -129,12 +133,18 @@ export default function ProductServiceCatalogPage() {
     setIsModalOpen(false);
     setEditingItem(null);
     setFormError(null);
+    setImageDragActive(false);
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  const uploadImageFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setFormError("Only image files can be uploaded.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setFormError("Image must be 10 MB or smaller.");
+      return;
+    }
 
     try {
       setImageUploading(true);
@@ -147,6 +157,20 @@ export default function ProductServiceCatalogPage() {
     } finally {
       setImageUploading(false);
     }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) uploadImageFile(file);
+  };
+
+  const handleImageDrop = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    setImageDragActive(false);
+    if (imageUploading || saving) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadImageFile(file);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -582,8 +606,13 @@ export default function ProductServiceCatalogPage() {
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="my-4 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto"
+          // A file dropped outside the dropzone would otherwise make the browser open the image
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => e.preventDefault()}
+        >
+          <div className="my-4 w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
             <h2 className="text-lg font-bold text-slate-900">
               {editingItem ? "Edit Catalog Item" : "Add Catalog Item"}
             </h2>
@@ -598,200 +627,250 @@ export default function ProductServiceCatalogPage() {
               </div>
             )}
 
-            <form onSubmit={handleFormSubmit} className="mt-5 space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Item Image</label>
-                {formData.imageUrl && (
-                  <div className="relative mb-3 h-40 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                    <img src={formData.imageUrl} alt="Item preview" className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, imageUrl: null })}
-                      className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-slate-600 shadow hover:text-rose-600"
-                      aria-label="Remove item image"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-                <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 ${imageUploading ? "pointer-events-none opacity-50" : ""}`}>
-                  <ImagePlus className="h-4 w-4" />
-                  {imageUploading ? "Uploading image..." : formData.imageUrl ? "Replace image" : "Upload image"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={handleImageChange}
-                    disabled={imageUploading || saving}
-                  />
-                </label>
-                <p className="mt-1 text-[11px] text-slate-400">Images are optional and uploaded to Cloudinary.</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Item Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sublimation Full Jersey, Tarpaulin Printing"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Type</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as CatalogItemType })}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            <form onSubmit={handleFormSubmit} className="mt-5">
+              <div className="grid gap-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+                {/* Left: image dropzone */}
+                <div className="space-y-2">
+                  <span className="block text-xs font-bold text-slate-700">Item Image</span>
+                  <label
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      if (!imageUploading && !saving) setImageDragActive(true);
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setImageDragActive(false);
+                    }}
+                    onDrop={handleImageDrop}
+                    className={cn(
+                      "relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition",
+                      imageDragActive
+                        ? "border-sky-500 bg-sky-50"
+                        : formData.imageUrl
+                          ? "border-slate-200 bg-slate-100"
+                          : "border-slate-300 bg-slate-50 hover:border-sky-400 hover:bg-sky-50/40",
+                      (imageUploading || saving) && "pointer-events-none"
+                    )}
                   >
-                    <option value="product">Product (Physical Good)</option>
-                    <option value="service">Service (Labor / Design)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
-                  <select
-                    value={formCategoryName}
-                    onChange={(e) => setFormCategoryName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  >
-                    {categoryOptions.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700">Priced options</label>
-                    <p className="mt-0.5 text-[11px] text-slate-400">Optional sizes or dimensions with their own prices.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((current) => ({
-                        ...current,
-                        variants: [...(current.variants || []), { name: "", price: 0 }],
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"
-                  >
-                    Add option
-                  </button>
-                </div>
-                {(formData.variants || []).map((variant, index) => (
-                  <div key={index} className="mb-2 grid grid-cols-[minmax(0,1fr)_120px_auto] items-center gap-2">
+                    {formData.imageUrl ? (
+                      <img src={formData.imageUrl} alt="Item preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center px-6 text-center">
+                        <ImageIcon className={cn("h-16 w-16", imageDragActive ? "text-sky-500" : "text-slate-300")} aria-hidden="true" />
+                        <p className="mt-3 text-sm font-semibold text-slate-700">
+                          {imageDragActive ? "Drop the image to upload" : "Drag & drop an image here"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          or <span className="font-semibold text-sky-700">click to browse</span>
+                        </p>
+                        <p className="mt-3 text-[11px] text-slate-400">PNG, JPG or WEBP · up to 10 MB</p>
+                      </div>
+                    )}
+                    {imageDragActive && formData.imageUrl && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-sky-600/70 text-sm font-semibold text-white">
+                        Drop to replace image
+                      </div>
+                    )}
+                    {imageUploading && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80 text-sm font-semibold text-slate-700">
+                        <Loader2 className="h-6 w-6 animate-spin text-sky-600" />
+                        Uploading image...
+                      </div>
+                    )}
                     <input
-                      value={variant.name}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          variants: (current.variants || []).map((option, optionIndex) =>
-                            optionIndex === index ? { ...option, name: event.target.value } : option
-                          ),
-                        }))
-                      }
-                      aria-label={`Option ${index + 1} name`}
-                      placeholder="e.g. Small or 4×6"
-                      className="min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={handleImageChange}
+                      disabled={imageUploading || saving}
                     />
+                  </label>
+                  {formData.imageUrl ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-slate-400">Click or drop a new image to replace it.</p>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, imageUrl: null })}
+                        disabled={imageUploading || saving}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400">Optional. Shown in the catalog and the quotation item picker.</p>
+                  )}
+                </div>
+
+                {/* Right: item details */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Item Name <span className="text-rose-500">*</span>
+                    </label>
                     <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={variant.price}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          variants: (current.variants || []).map((option, optionIndex) =>
-                            optionIndex === index
-                              ? { ...option, price: Number(event.target.value) || 0 }
-                              : option
-                          ),
-                        }))
-                      }
-                      aria-label={`Option ${index + 1} price`}
-                      placeholder="Price"
+                      type="text"
+                      required
+                      placeholder="e.g. Sublimation Full Jersey, Tarpaulin Printing"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                     />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((current) => ({
-                          ...current,
-                          variants: (current.variants || []).filter((_, optionIndex) => optionIndex !== index),
-                        }))
-                      }
-                      aria-label={`Remove option ${index + 1}`}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
                   </div>
-                ))}
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Base Reference Price (₱) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="0.00"
-                  value={formData.basePrice}
-                  onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-                <p className="mt-1 text-[11px] text-slate-400">
-                  Used when no priced options are configured. Selected option prices are used in quotations and orders.
-                </p>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Type</label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value as CatalogItemType })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      >
+                        <option value="product">Product (Physical Good)</option>
+                        <option value="service">Service (Labor / Design)</option>
+                      </select>
+                    </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
-                <textarea
-                  rows={2}
-                  placeholder="Specifications, material details, dimensions..."
-                  value={formData.description || ""}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
+                      <select
+                        value={formCategoryName}
+                        onChange={(e) => setFormCategoryName(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      >
+                        {categoryOptions.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
-                  />
-                  <span>Active in Catalog</span>
-                </label>
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700">Priced options</label>
+                        <p className="mt-0.5 text-[11px] text-slate-400">Optional sizes or dimensions with their own prices.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((current) => ({
+                            ...current,
+                            variants: [...(current.variants || []), { name: "", price: 0 }],
+                          }))
+                        }
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"
+                      >
+                        Add option
+                      </button>
+                    </div>
+                    {(formData.variants || []).map((variant, index) => (
+                      <div key={index} className="mb-2 grid grid-cols-[minmax(0,1fr)_120px_auto] items-center gap-2">
+                        <input
+                          value={variant.name}
+                          onChange={(event) =>
+                            setFormData((current) => ({
+                              ...current,
+                              variants: (current.variants || []).map((option, optionIndex) =>
+                                optionIndex === index ? { ...option, name: event.target.value } : option
+                              ),
+                            }))
+                          }
+                          aria-label={`Option ${index + 1} name`}
+                          placeholder="e.g. Small or 4×6"
+                          className="min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={variant.price}
+                          onChange={(event) =>
+                            setFormData((current) => ({
+                              ...current,
+                              variants: (current.variants || []).map((option, optionIndex) =>
+                                optionIndex === index
+                                  ? { ...option, price: Number(event.target.value) || 0 }
+                                  : option
+                              ),
+                            }))
+                          }
+                          aria-label={`Option ${index + 1} price`}
+                          placeholder="Price"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((current) => ({
+                              ...current,
+                              variants: (current.variants || []).filter((_, optionIndex) => optionIndex !== index),
+                            }))
+                          }
+                          aria-label={`Remove option ${index + 1}`}
+                          className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
 
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isStockItem}
-                    onChange={(e) => setFormData({ ...formData, isStockItem: e.target.checked })}
-                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
-                  />
-                  <span>Stock Inventory Item</span>
-                </label>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Base Reference Price (₱) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      placeholder="0.00"
+                      value={formData.basePrice}
+                      onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Used when no priced options are configured. Selected option prices are used in quotations and orders.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Specifications, material details, dimensions..."
+                      value={formData.description || ""}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-6 pt-2">
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                        className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
+                      />
+                      <span>Active in Catalog</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isStockItem}
+                        onChange={(e) => setFormData({ ...formData, isStockItem: e.target.checked })}
+                        className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
+                      />
+                      <span>Stock Inventory Item</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
