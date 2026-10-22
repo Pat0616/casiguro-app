@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { AlertCircle, ChevronDown, Download, History, Loader2 } from "lucide-react";
 import type { Account, AuditCategory, AuditLogEntry } from "@/types";
 import { cn } from "@/lib/utils";
+import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import { downloadAuditLogCsv, getAuditLogs, type AuditLogFilters } from "@/utils/accountAPI";
 import {
@@ -15,9 +16,16 @@ import {
 } from "./accountMeta";
 
 const CATEGORY_FILTERS: (AuditCategory | "all")[] = ["all", "auth", "order", "payment", "quotation", "catalog", "account"];
+const COLUMN_COUNT = 6;
 
-export default function AccountAuditLog({ account }: { account: Account }) {
-  const [filters, setFilters] = useState<AuditLogFilters>({ category: "all", from: "", to: "" });
+interface AccountAuditLogProps {
+  account: Account;
+  category: AuditCategory | "all";
+  onCategoryChange: (category: AuditCategory | "all") => void;
+}
+
+export default function AccountAuditLog({ account, category, onCategoryChange }: AccountAuditLogProps) {
+  const [dates, setDates] = useState({ from: "", to: "" });
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,11 +34,13 @@ export default function AccountAuditLog({ account }: { account: Account }) {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
+  const filters: AuditLogFilters = { category, ...dates };
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const page = await getAuditLogs(account.id, filters);
+      const page = await getAuditLogs(account.id, { category, ...dates });
       setEntries(page.entries);
       setNextCursor(page.nextCursor);
       setExpanded(new Set());
@@ -39,7 +49,7 @@ export default function AccountAuditLog({ account }: { account: Account }) {
     } finally {
       setLoading(false);
     }
-  }, [account.id, filters]);
+  }, [account.id, category, dates]);
 
   useEffect(() => {
     load();
@@ -79,156 +89,205 @@ export default function AccountAuditLog({ account }: { account: Account }) {
       return next;
     });
 
-  // Group consecutive entries by calendar day (entries are newest first)
+  // Entries are newest first; a header row starts each calendar day
   let lastDay = "";
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <Card className="flex min-w-0 flex-col overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
         <div>
-          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-800">
+          <h3 className="flex items-center gap-2 font-display text-base font-bold text-slate-900">
             <History className="h-4 w-4 text-sky-600" />
             Activity log
           </h3>
-          <p className="text-xs text-slate-500">Only actions performed by {account.fullName}. Entries can't be edited or deleted.</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Every action performed by {account.fullName}. Entries are permanent and can't be edited or deleted.
+          </p>
         </div>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting || entries.length === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700 disabled:opacity-50"
         >
           {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
           Export CSV
         </button>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by category">
-          {CATEGORY_FILTERS.map((category) => (
+          {CATEGORY_FILTERS.map((key) => (
             <button
-              key={category}
+              key={key}
               type="button"
-              onClick={() => setFilters((f) => ({ ...f, category }))}
-              aria-pressed={filters.category === category}
+              onClick={() => onCategoryChange(key)}
+              aria-pressed={category === key}
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-semibold transition",
-                filters.category === category ? "bg-sky-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-sky-700"
+                category === key ? "bg-sky-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-sky-700"
               )}
             >
-              {category === "all" ? "All activity" : AUDIT_CATEGORY[category].label}
+              {key === "all" ? "All activity" : AUDIT_CATEGORY[key].label}
             </button>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <label className="flex items-center gap-1.5">
             From
-            <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
+            <input type="date" value={dates.from} max={dates.to || undefined} onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))}
               className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700" />
           </label>
           <label className="flex items-center gap-1.5">
             To
-            <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
+            <input type="date" value={dates.to} min={dates.from || undefined} onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))}
               className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700" />
           </label>
-          {(filters.from || filters.to) && (
-            <button type="button" onClick={() => setFilters((f) => ({ ...f, from: "", to: "" }))} className="font-semibold text-sky-700 hover:text-sky-800">
-              Clear dates
+          {(dates.from || dates.to) && (
+            <button type="button" onClick={() => setDates({ from: "", to: "" })} className="font-semibold text-sky-700 hover:text-sky-800">
+              Clear
             </button>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+        <div className="mx-5 mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
 
       {loading ? (
-        <p className="py-10 text-center text-sm text-slate-500">Loading activity...</p>
+        <p className="py-16 text-center text-sm text-slate-500">Loading activity...</p>
       ) : entries.length === 0 ? (
-        <EmptyState icon={History} title="No activity found" subtitle="Nothing matches these filters yet." />
+        <div className="p-5">
+          <EmptyState icon={History} title="No activity found" subtitle="Nothing matches these filters yet." />
+        </div>
       ) : (
-        <ol className="space-y-1.5">
-          {entries.map((entry) => {
-            const date = parseServerDate(entry.createdAt);
-            const day = date ? formatDay(date) : "";
-            const showDay = day !== lastDay;
-            lastDay = day;
-            const meta = AUDIT_CATEGORY[entry.category] || AUDIT_CATEGORY.account;
-            const Icon = meta.icon;
-            const changeEntries = entry.changes ? Object.entries(entry.changes) : [];
-            const isOpen = expanded.has(entry.id);
-            return (
-              <Fragment key={entry.id}>
-                {showDay && <li className="pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400 first:pt-0">{day}</li>}
-                <li className={cn("rounded-lg border border-l-4 border-slate-200 bg-white px-3 py-2.5", FLAGGED_ACTIONS[entry.action] || "border-l-slate-200")}>
-                  <div className="flex items-start gap-3">
-                    <span className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", meta.tint)}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-slate-800">{entry.description}</p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-400">
-                        <span className="font-semibold text-slate-500">{date ? formatTime(date) : "—"}</span>
-                        <span className="font-mono">{entry.action}</span>
-                        {entry.entityLabel && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600">{entry.entityLabel}</span>}
-                        {entry.ipAddress && <span>IP {entry.ipAddress}</span>}
-                      </p>
-                    </div>
-                    {changeEntries.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => toggle(entry.id)}
-                        aria-expanded={isOpen}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-50"
-                      >
-                        {changeEntries.length} change{changeEntries.length === 1 ? "" : "s"}
-                        <ChevronDown className={cn("h-3.5 w-3.5 transition", isOpen && "rotate-180")} />
-                      </button>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                <th className="w-24 px-5 py-2.5">Time</th>
+                <th className="w-36 px-3 py-2.5">Category</th>
+                <th className="px-3 py-2.5">Activity</th>
+                <th className="w-40 px-3 py-2.5">Record</th>
+                <th className="w-32 px-3 py-2.5">IP address</th>
+                <th className="w-28 px-5 py-2.5 text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => {
+                const date = parseServerDate(entry.createdAt);
+                const day = date ? formatDay(date) : "";
+                const showDay = day !== lastDay;
+                lastDay = day;
+                const meta = AUDIT_CATEGORY[entry.category] || AUDIT_CATEGORY.account;
+                const Icon = meta.icon;
+                const changeEntries = entry.changes ? Object.entries(entry.changes) : [];
+                const isOpen = expanded.has(entry.id);
+                const flag = FLAGGED_ACTIONS[entry.action];
+                return (
+                  <Fragment key={entry.id}>
+                    {showDay && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={COLUMN_COUNT} className="border-y border-slate-100 px-5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                          {day}
+                        </td>
+                      </tr>
                     )}
-                  </div>
-                  {isOpen && (
-                    <table className="mt-2 w-full text-xs">
-                      <thead>
-                        <tr className="text-left text-[10px] uppercase tracking-wide text-slate-400">
-                          <th className="py-1 pr-3 font-semibold">Field</th>
-                          <th className="py-1 pr-3 font-semibold">Before</th>
-                          <th className="py-1 font-semibold">After</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {changeEntries.map(([field, change]) => (
-                          <tr key={field} className="border-t border-slate-100 align-top">
-                            <td className="py-1.5 pr-3 font-medium text-slate-600">{fieldLabel(field)}</td>
-                            <td className="break-all py-1.5 pr-3 text-slate-400 line-through decoration-slate-300">{formatChangeValue(field, change?.from)}</td>
-                            <td className="break-all py-1.5 font-semibold text-slate-800">{formatChangeValue(field, change?.to)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </li>
-              </Fragment>
-            );
-          })}
-        </ol>
-      )}
-
-      {nextCursor && !loading && (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700 disabled:opacity-50"
-          >
-            {loadingMore ? "Loading..." : "Load older activity"}
-          </button>
+                    <tr className={cn("align-top border-b border-slate-100", flag && "border-l-4", flag)}>
+                      <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-slate-500">{date ? formatTime(date) : "—"}</td>
+                      <td className="px-3 py-3">
+                        <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold", meta.tint)}>
+                          <Icon className="h-3.5 w-3.5" />
+                          {meta.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <p className="text-slate-800">{entry.description}</p>
+                        <p className="mt-0.5 font-mono text-[11px] text-slate-400">{entry.action}</p>
+                      </td>
+                      <td className="px-3 py-3">
+                        {entry.entityLabel ? (
+                          <span className="inline-block max-w-full truncate rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700" title={entry.entityLabel}>
+                            {entry.entityLabel}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 font-mono text-xs text-slate-500" title={entry.userAgent || undefined}>
+                        {entry.ipAddress === "::1" || entry.ipAddress === "127.0.0.1" ? "This computer" : entry.ipAddress || "—"}
+                      </td>
+                      <td className="px-5 py-2.5 text-right">
+                        {changeEntries.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => toggle(entry.id)}
+                            aria-expanded={isOpen}
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                          >
+                            {changeEntries.length} change{changeEntries.length === 1 ? "" : "s"}
+                            <ChevronDown className={cn("h-3.5 w-3.5 transition", isOpen && "rotate-180")} />
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="border-b border-slate-100 bg-sky-50/30">
+                        <td />
+                        <td colSpan={COLUMN_COUNT - 1} className="px-3 pb-4 pt-1">
+                          <table className="w-full max-w-3xl overflow-hidden rounded-lg border border-slate-200 bg-white text-xs">
+                            <thead className="bg-slate-50">
+                              <tr className="text-left text-[10px] uppercase tracking-wide text-slate-400">
+                                <th className="px-3 py-1.5 font-semibold">Field</th>
+                                <th className="px-3 py-1.5 font-semibold">Before</th>
+                                <th className="px-3 py-1.5 font-semibold">After</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {changeEntries.map(([field, change]) => (
+                                <tr key={field} className="border-t border-slate-100 align-top">
+                                  <td className="px-3 py-1.5 font-medium text-slate-600">{fieldLabel(field)}</td>
+                                  <td className="break-all px-3 py-1.5 text-slate-400 line-through decoration-slate-300">{formatChangeValue(field, change?.from)}</td>
+                                  <td className="break-all px-3 py-1.5 font-semibold text-slate-800">{formatChangeValue(field, change?.to)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-    </section>
+
+      {!loading && entries.length > 0 && (
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+          <span>
+            Showing {entries.length} entr{entries.length === 1 ? "y" : "ies"}
+            {nextCursor ? " (older entries available)" : ""}
+          </span>
+          {nextCursor && (
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700 disabled:opacity-50"
+            >
+              {loadingMore ? "Loading..." : "Load older activity"}
+            </button>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

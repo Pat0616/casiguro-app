@@ -16,7 +16,7 @@ export default function AppShell({ unreadCount, pendingAccountsCount }: AppShell
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
-  const pageTitle = NAV_ITEMS.find((item) => `/${item.key}` === pathname)?.label || "";
+  const pageTitle = NAV_ITEMS.find((item) => pathname === `/${item.key}` || pathname.startsWith(`/${item.key}/`))?.label || "";
 
   return (
     <div className="min-h-screen bg-slate-50">

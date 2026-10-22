@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Check, ChevronRight, RotateCcw, Search, ShieldCheck, UserCog, Users, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Check, ChevronRight, Search, UserCog, Users } from "lucide-react";
 import type { Account, AccountStatus } from "@/types";
 import { cn, relativeTime } from "@/lib/utils";
 import Card from "@/components/ui/Card";
@@ -11,9 +12,9 @@ import { inputClass } from "@/components/ui/Field";
 import { useAuth } from "@/context/AuthenticationContext";
 import { getAccounts } from "@/utils/accountAPI";
 import { subscribeToAccountChanges } from "@/utils/socket";
+import AccountActions from "@/components/accounts/AccountActions";
 import AccountActionModal, { type AccountAction } from "@/components/accounts/AccountActionModal";
 import PromoteAdminModal from "@/components/accounts/PromoteAdminModal";
-import AccountAuditLog from "@/components/accounts/AccountAuditLog";
 import { ACCOUNT_STATUS, ROLE_BADGE, formatDateTime, parseServerDate } from "@/components/accounts/accountMeta";
 
 type StatusTab = AccountStatus | "all";
@@ -25,12 +26,12 @@ interface AccountsPageProps {
 
 export default function AccountsPage({ onPendingCountChange }: AccountsPageProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<StatusTab | null>(null);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<{ account: Account; action: AccountAction } | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<Account | null>(null);
 
@@ -69,8 +70,6 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
     );
   }, [accounts, tab, query]);
 
-  const selected = accounts.find((a) => a.id === selectedId) || null;
-
   const applyUpdate = (updated: Account) => {
     setAccounts((prev) => {
       const next = prev.map((a) => (a.id === updated.id ? updated : a));
@@ -79,65 +78,12 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
     });
   };
 
-  const actionButtons = (account: Account, size: "sm" | "md") => {
-    if (account.id === user?.id) return <span className="text-xs text-slate-400">This is you</span>;
-    const base = cn(
-      "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg font-semibold transition",
-      size === "sm" ? "px-2.5 py-1.5 text-xs" : "px-3.5 py-2 text-sm"
-    );
-    const open = (action: AccountAction) => (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setPendingAction({ account, action });
-    };
-    switch (account.status) {
-      case "pending":
-        return (
-          <>
-            <button type="button" onClick={open("approve")} className={cn(base, "bg-emerald-600 text-white hover:bg-emerald-700")}>
-              <Check className="h-3.5 w-3.5" /> Approve
-            </button>
-            <button type="button" onClick={open("reject")} className={cn(base, "border border-rose-200 text-rose-700 hover:bg-rose-50")}>
-              <X className="h-3.5 w-3.5" /> Reject
-            </button>
-          </>
-        );
-      case "active":
-        return (
-          <>
-            {account.role === "employee" && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPromoteTarget(account);
-                }}
-                className={cn(base, "border border-violet-200 text-violet-700 hover:bg-violet-50")}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" /> Make admin
-              </button>
-            )}
-            <button type="button" onClick={open("deactivate")} className={cn(base, "border border-slate-200 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700")}>
-              <Ban className="h-3.5 w-3.5" /> Deactivate
-            </button>
-          </>
-        );
-      case "deactivated":
-        return (
-          <button type="button" onClick={open("reactivate")} className={cn(base, "border border-emerald-200 text-emerald-700 hover:bg-emerald-50")}>
-            <RotateCcw className="h-3.5 w-3.5" /> Reactivate
-          </button>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="space-y-6">
       <SectionHeading
         eyebrow="Administration"
         title="Accounts & Audit Logs"
-        subtitle="Approve new registrations, manage employee access, and review each account's activity."
+        subtitle="Approve new registrations, manage employee access, and open an account to review its full activity log."
       />
 
       <Card className="p-4">
@@ -189,7 +135,7 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full min-w-[960px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
                   <th className="px-5 py-3">Account</th>
@@ -198,6 +144,7 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Registered</th>
                   <th className="px-5 py-3">Last sign-in</th>
+                  <th className="px-5 py-3">Logged actions</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -205,7 +152,12 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
                 {visible.map((account) => {
                   const lastLogin = parseServerDate(account.lastLoginAt);
                   return (
-                    <tr key={account.id} onClick={() => setSelectedId(account.id)} className="cursor-pointer transition hover:bg-slate-50">
+                    <tr
+                      key={account.id}
+                      onClick={() => navigate(`/accounts/${account.id}`)}
+                      title="Open account details and activity log"
+                      className="cursor-pointer transition hover:bg-slate-50"
+                    >
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <Avatar name={account.fullName} size="sm" />
@@ -223,10 +175,16 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
                       <td className="px-5 py-3.5"><Badge config={ACCOUNT_STATUS[account.status]} label={ACCOUNT_STATUS[account.status].label} /></td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-xs text-slate-500">{formatDateTime(account.registeredAt)}</td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-xs text-slate-500">{lastLogin ? relativeTime(lastLogin) : "Never"}</td>
+                      <td className="px-5 py-3.5 font-mono text-sm text-slate-700">{account.auditCount}</td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-1.5">
-                          {actionButtons(account, "sm")}
-                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                          <AccountActions
+                            account={account}
+                            currentUserId={user?.id}
+                            onAction={(action) => setPendingAction({ account, action })}
+                            onPromote={() => setPromoteTarget(account)}
+                          />
+                          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
                         </div>
                       </td>
                     </tr>
@@ -238,61 +196,11 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
         )}
       </Card>
 
-      {/* Account detail drawer with that account's own audit log */}
-      {selected && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setSelectedId(null)} />
-          <aside className="relative flex h-full w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl" aria-label={`${selected.fullName} account details`}>
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <Avatar name={selected.fullName} size="lg" />
-                <div>
-                  <h2 className="font-display text-lg font-bold text-slate-900">{selected.fullName}</h2>
-                  <p className="text-sm text-slate-500">{selected.email}</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    <Badge config={ROLE_BADGE[selected.role]} label={ROLE_BADGE[selected.role].label} />
-                    <Badge config={ACCOUNT_STATUS[selected.status]} label={ACCOUNT_STATUS[selected.status].label} />
-                  </div>
-                </div>
-              </div>
-              <button type="button" onClick={() => setSelectedId(null)} aria-label="Close" className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm sm:grid-cols-3">
-                {[
-                  ["Contact number", selected.contactNumber || "—"],
-                  ["Registered", formatDateTime(selected.registeredAt)],
-                  ["Last sign-in", formatDateTime(selected.lastLoginAt)],
-                  ["Approved", selected.approvedAt ? `${formatDateTime(selected.approvedAt)}${selected.approvedBy ? ` by ${selected.approvedBy}` : ""}` : "—"],
-                  ["Last status change", selected.statusChangedAt ? `${formatDateTime(selected.statusChangedAt)}${selected.statusChangedBy ? ` by ${selected.statusChangedBy}` : ""}` : "—"],
-                  ["Logged actions", String(selected.auditCount)],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</dt>
-                    <dd className="mt-0.5 text-slate-800">{value}</dd>
-                  </div>
-                ))}
-                {selected.statusReason && (
-                  <div className="col-span-full">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      {selected.status === "rejected" ? "Rejection reason" : "Reason"}
-                    </dt>
-                    <dd className="mt-0.5 text-slate-800">{selected.statusReason}</dd>
-                  </div>
-                )}
-              </dl>
-
-              {selected.id !== user?.id && selected.status !== "rejected" && (
-                <div className="flex flex-wrap items-center gap-2">{actionButtons(selected, "md")}</div>
-              )}
-
-              <AccountAuditLog key={selected.id} account={selected} />
-            </div>
-          </aside>
-        </div>
+      {!loading && accounts.length > 0 && counts.pending === 0 && tab === "pending" && (
+        <p className="flex items-center gap-1.5 text-xs text-slate-400">
+          <UserCog className="h-3.5 w-3.5" />
+          Employees register from the sign-in page using "Create an account".
+        </p>
       )}
 
       <AccountActionModal
@@ -302,13 +210,6 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
         onDone={applyUpdate}
       />
       <PromoteAdminModal account={promoteTarget} onClose={() => setPromoteTarget(null)} onDone={applyUpdate} />
-
-      {!loading && accounts.length > 0 && counts.pending === 0 && tab === "pending" && (
-        <p className="flex items-center gap-1.5 text-xs text-slate-400">
-          <UserCog className="h-3.5 w-3.5" />
-          Employees register from the sign-in page using "Create an account".
-        </p>
-      )}
     </div>
   );
 }

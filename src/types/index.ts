@@ -33,6 +33,14 @@ export interface Account {
   auditCount: number;
 }
 
+export interface AccountDetail extends Account {
+  activitySummary: {
+    byCategory: Partial<Record<AuditCategory, number>>;
+    lastActivityAt: string | null;
+    failedLogins30d: number;
+  };
+}
+
 export interface AuditLogEntry {
   id: number;
   action: string;

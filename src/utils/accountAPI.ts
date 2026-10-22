@@ -1,12 +1,16 @@
 // casiguro-app/src/utils/accountAPI.ts
 // Admin-only account management and per-account audit logs
 import { apiRequest, BASE_URL } from "./RestAPI";
-import type { Account, AuditCategory, AuditLogEntry } from "@/types";
+import type { Account, AccountDetail, AuditCategory, AuditLogEntry } from "@/types";
 
 export const PROMOTE_CONFIRMATION_PHRASE = "Confirm Account Admin For Casiguro";
 
 export function getAccounts(): Promise<Account[]> {
   return apiRequest("/api/accounts", { method: "GET" });
+}
+
+export function getAccount(id: string): Promise<AccountDetail> {
+  return apiRequest(`/api/accounts/${id}`, { method: "GET" });
 }
 
 export function getPendingAccountCount(): Promise<{ pendingCount: number }> {

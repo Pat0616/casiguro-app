@@ -16,6 +16,7 @@ import AppShell from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import AccountsPage from "@/pages/AccountsPage";
+import AccountDetailPage from "@/pages/AccountDetailPage";
 import DashboardPage from "@/pages/DashboardPage";
 import OrderManagementPage from "@/pages/OrderManagementPage";
 import ProductionMonitoringPage from "@/pages/ProductionMonitoringPage";
@@ -227,6 +228,7 @@ function MainApp() {
               <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
               <Route path="/products-services" element={<ProductServiceCatalogPage />} />
               <Route path="/accounts" element={<AccountsPage onPendingCountChange={setPendingAccountsCount} />} />
+              <Route path="/accounts/:id" element={<AccountDetailPage />} />
             </Route>
           </Route>
         </Route>
