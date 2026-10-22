@@ -33,7 +33,7 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
   const filtered = activeOrders.filter((o) => {
     const matchesFilter = filter === "all" || o.status === filter;
     const q = query.toLowerCase();
-    const matchesQuery = !q || o.customerName.toLowerCase().includes(q) || o.product.toLowerCase().includes(q) || o.refNo.toLowerCase().includes(q);
+    const matchesQuery = !q || o.customerName.toLowerCase().includes(q) || o.product.toLowerCase().includes(q) || o.soaNo.toLowerCase().includes(q);
     return matchesFilter && matchesQuery;
   });
 
@@ -85,7 +85,7 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
                     <Avatar name={o.customerName} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-800">{o.customerName}</p>
-                      <p className="truncate text-xs text-slate-400">{o.refNo}</p>
+                      <p className="truncate text-xs text-slate-400">SOA {o.soaNo}</p>
                     </div>
                   </div>
                   <Badge config={cfg} label={cfg.label} />

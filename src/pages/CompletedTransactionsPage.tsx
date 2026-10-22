@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CheckCircle2, Search } from "lucide-react";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, formatDocDate } from "@/lib/utils";
 import { PAYMENT_STATUS } from "@/lib/constants";
 import type { CustomerPaymentFilter, Order } from "@/types";
 import Card from "@/components/ui/Card";
@@ -8,10 +8,17 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/Field";
+import OrderDocumentsModal from "@/components/orders/OrderDocumentsModal";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-export default function CompletedTransactionsPage({ orders }: { orders: Order[] }) {
+interface CompletedTransactionsPageProps {
+  orders: Order[];
+  onOrderUpdated: (order: Order) => void;
+}
+
+export default function CompletedTransactionsPage({ orders, onOrderUpdated }: CompletedTransactionsPageProps) {
+  const [selected, setSelected] = useState<Order | null>(null);
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
   const [year, setYear] = useState("all");
@@ -32,7 +39,7 @@ export default function CompletedTransactionsPage({ orders }: { orders: Order[] 
         o.customerName.toLowerCase().includes(q) ||
         o.product.toLowerCase().includes(q) ||
         o.category.toLowerCase().includes(q) ||
-        o.refNo.toLowerCase().includes(q) ||
+        [o.soaNo, o.prNo, o.poNo, o.siOrNo, o.drNo].some((ref) => ref?.toLowerCase().includes(q)) ||
         (o.items && o.items.some((it) => it.itemName.toLowerCase().includes(q))) ||
         formatDate(o.dateCompleted).toLowerCase().includes(q);
       return matchYear && matchMonth && matchPayment && matchQuery;
@@ -55,7 +62,7 @@ export default function CompletedTransactionsPage({ orders }: { orders: Order[] 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input className={cn(inputClass, "pl-10")} placeholder="Search customer, product, category, date..." value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className={cn(inputClass, "pl-10")} placeholder="Search customer, product, SOA/PO/DR no..." value={query} onChange={(e) => setQuery(e.target.value)} />
             </div>
             <div className="flex gap-3">
               <select aria-label="Filter by completion month" className={inputClass} value={month} onChange={(e) => setMonth(e.target.value)}>
@@ -104,10 +111,11 @@ export default function CompletedTransactionsPage({ orders }: { orders: Order[] 
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3">Reference</th>
+                  <th className="px-5 py-3">SOA No / Date</th>
+                  <th className="px-5 py-3">PO / DR / SI-OR</th>
                   <th className="px-5 py-3">Customer</th>
                   <th className="px-5 py-3">Product</th>
                   <th className="px-5 py-3">Category</th>
@@ -120,8 +128,22 @@ export default function CompletedTransactionsPage({ orders }: { orders: Order[] 
                 {filtered.map((o) => {
                   const pcfg = PAYMENT_STATUS[o.paymentStatus];
                   return (
-                    <tr key={o.id} className="transition hover:bg-slate-50">
-                      <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-400">{o.refNo}</td>
+                    <tr key={o.id} onClick={() => setSelected(o)} title="Edit reference documents" className="cursor-pointer transition hover:bg-slate-50">
+                      <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs">
+                        <span className="block font-bold text-slate-700">{o.soaNo}</span>
+                        <span className="text-slate-400">{formatDocDate(o.soaDate)}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-slate-500">
+                        {o.poNo || o.drNo || o.siOrNo ? (
+                          <>
+                            {o.poNo && <span className="block">PO {o.poNo}</span>}
+                            {o.drNo && <span className="block">DR {o.drNo}</span>}
+                            {o.siOrNo && <span className="block">SI/OR {o.siOrNo}</span>}
+                          </>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-800">{o.customerName}</td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{o.product}</td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-slate-500">{o.category}</td>
@@ -136,6 +158,8 @@ export default function CompletedTransactionsPage({ orders }: { orders: Order[] 
           </div>
         )}
       </Card>
+
+      <OrderDocumentsModal order={selected} onClose={() => setSelected(null)} onSaved={onOrderUpdated} />
     </div>
   );
 }

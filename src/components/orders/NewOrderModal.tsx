@@ -20,6 +20,7 @@ import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
 import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
 import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
+import OrderDocumentFields, { EMPTY_DOCUMENT_FORM, SoaSummary, toDocumentPayload } from "@/components/orders/OrderDocumentFields";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { getCatalogItems } from "@/utils/catalogAPI";
 
@@ -73,6 +74,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
   const [step, setStep] = useState<1 | 2>(1);
   const [orderType, setOrderType] = useState<OrderType>("custom");
   const [form, setForm] = useState(emptyForm);
+  const [documents, setDocuments] = useState(EMPTY_DOCUMENT_FORM);
   const [customers, setCustomers] = useState<CustomerSuggestion[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
@@ -252,9 +254,11 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       dueDate: form.dueDate,
       orderType,
       items: mappedItems,
+      ...toDocumentPayload(documents),
     });
 
     setForm({ ...emptyForm, dateOrdered: isoDate(NOW), dueDate: isoDate(NOW) });
+    setDocuments(EMPTY_DOCUMENT_FORM);
     setItems([]);
     setOrderType("custom");
     setStep(1);
@@ -460,6 +464,15 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                   <Field label="Due date"><div className="relative"><Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="date" required value={form.dueDate} onChange={(event) => setForm((prev) => ({ ...prev, dueDate: event.target.value }))} className={cn(inputClass, "pl-9")} /></div></Field>
                 </div>
                 <Field label="Notes / special instructions"><textarea rows={4} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="Optional notes for production or delivery" className={inputClass} /></Field>
+
+                <section className="space-y-4 rounded-2xl border border-slate-200 p-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Statement of Account & reference documents</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">SOA No and SOA Date are assigned automatically when the order is saved. The other fields can be filled in later.</p>
+                  </div>
+                  <SoaSummary />
+                  <OrderDocumentFields value={documents} onChange={setDocuments} />
+                </section>
               </div>
 
               <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">

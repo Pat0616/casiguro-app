@@ -114,6 +114,13 @@ function MainApp() {
     }
   };
 
+  // Merge an order the server already saved (e.g. quotation conversion, document edits)
+  const handleOrderSaved = (saved: Order) => {
+    setOrders((prev) =>
+      prev.some((o) => o.id === saved.id) ? prev.map((o) => (o.id === saved.id ? saved : o)) : [saved, ...prev]
+    );
+  };
+
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
@@ -149,13 +156,18 @@ function MainApp() {
           <Route element={<AppShell unreadCount={unreadCount} />}>
             <Route
               path="/orders"
-              element={<OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} />}
+              element={
+                <OrderManagementPage orders={orders} onCreateOrder={handleCreateOrder} onOrderSaved={handleOrderSaved} />
+              }
             />
             <Route
               path="/production"
               element={<ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
             />
-            <Route path="/completed" element={<CompletedTransactionsPage orders={orders} />} />
+            <Route
+              path="/completed"
+              element={<CompletedTransactionsPage orders={orders} onOrderUpdated={handleOrderSaved} />}
+            />
             <Route path="/customers" element={<CustomerOverviewPage orders={orders} />} />
             <Route
               path="/notifications"

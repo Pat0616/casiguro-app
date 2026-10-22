@@ -61,7 +61,14 @@ export const MOCK_ORDERS: Order[] = RAW_ORDERS.map((o, i) => {
   const paymentStatus = o.amountPaid <= 0 ? "unpaid" : balance <= 0 ? "paid" : "partial";
   return {
     id: `ord-${i + 1}`,
-    refNo: `TXN-${o.dateOrdered.slice(0, 4)}-${String(i + 1).padStart(4, "0")}`,
+    soaNo: `${o.dateOrdered.slice(0, 7)}-${i + 1}`,
+    soaDate: o.dateOrdered,
+    prNo: null,
+    poNo: null,
+    siOrNo: null,
+    siOrDate: null,
+    drNo: null,
+    drDate: null,
     ...o,
     totalPrice,
     balance,

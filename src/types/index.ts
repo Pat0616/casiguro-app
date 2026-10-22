@@ -94,12 +94,23 @@ export interface OrderItem {
   productionStatus: OrderStatus;
 }
 
+/** Optional reference documents attached to an order. Dates are YYYY-MM-DD. */
+export interface OrderDocuments {
+  prNo: string | null; // Customer's Purchase Request No
+  poNo: string | null; // Customer's Purchase Order No
+  siOrNo: string | null; // Sales Invoice / Official Receipt No
+  siOrDate: string | null;
+  drNo: string | null; // Delivery Receipt No
+  drDate: string | null;
+}
+
 /**
  * Enterprise Canonical Order record with nested OrderItem[] and overall quantity-weighted progress.
  */
-export interface Order {
+export interface Order extends OrderDocuments {
   id: string;
-  refNo: string;
+  soaNo: string; // Statement of Account No, YYYY-MM-N (system-assigned)
+  soaDate: string; // Date the order was created (system-assigned)
   quotationId?: string | null;
   customerName: string;
   contactNumber: string;
@@ -148,7 +159,7 @@ export interface AppNotification {
   readAt?: string | null;
 }
 
-export interface NewOrderFormData {
+export interface NewOrderFormData extends Partial<OrderDocuments> {
   customerName: string;
   contactNumber: string;
   product: string;

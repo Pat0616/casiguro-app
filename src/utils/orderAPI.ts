@@ -1,6 +1,6 @@
 // casiguro-app/src/utils/orderAPI.ts
 import { apiRequest } from "./RestAPI";
-import type { NewOrderFormData, Order, OrderUpdatePayload } from "@/types";
+import type { NewOrderFormData, Order, OrderDocuments, OrderUpdatePayload } from "@/types";
 
 export function getOrders(): Promise<Order[]> {
   return apiRequest("/api/orders", { method: "GET" });
@@ -21,6 +21,13 @@ export function updateOrder(id: string, payload: OrderUpdatePayload): Promise<Or
   return apiRequest(`/api/orders/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+export function updateOrderDocuments(id: string, documents: OrderDocuments): Promise<Order> {
+  return apiRequest(`/api/orders/${id}/documents`, {
+    method: "PUT",
+    body: JSON.stringify(documents),
   });
 }
 

@@ -340,7 +340,7 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-slate-500">{order.refNo}</span>
+                            <span className="font-mono text-xs font-bold text-slate-500">SOA {order.soaNo}</span>
                             <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                               {order.orderType === "stock" ? "Stock Order" : "Custom Order"}
                             </span>

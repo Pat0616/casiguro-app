@@ -1,13 +1,20 @@
 // casiguro-app/src/components/orders/UpdateOrderModal.tsx
 import { useEffect, useState } from "react";
-import { CheckCircle2, Plus, Boxes, Briefcase, AlertCircle, DollarSign } from "lucide-react";
+import { CheckCircle2, Plus, Boxes, Briefcase, AlertCircle, DollarSign, FileText } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
 import type { Order, OrderItem, OrderStatus, OrderUpdatePayload, PaymentStatusKey } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
-import { updateItemProduction, recordPayment } from "@/utils/orderAPI";
+import OrderDocumentFields, {
+  EMPTY_DOCUMENT_FORM,
+  SoaSummary,
+  documentsChanged,
+  toDocumentForm,
+  toDocumentPayload,
+} from "@/components/orders/OrderDocumentFields";
+import { updateItemProduction, updateOrderDocuments } from "@/utils/orderAPI";
 
 interface UpdateOrderModalProps {
   order: Order | null;
@@ -22,10 +29,12 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
   const [showPaidAddition, setShowPaidAddition] = useState(false);
   const [paidAddition, setPaidAddition] = useState("");
   const [markCompleteDespiteBalance, setMarkCompleteDespiteBalance] = useState(false);
+  const [documents, setDocuments] = useState(EMPTY_DOCUMENT_FORM);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (order) {
+      setDocuments(toDocumentForm(order));
       setItems(order.items && order.items.length > 0 ? order.items : []);
       setAmountPaid(String(order.amountPaid));
       setPaymentStatus(order.paymentStatus);
@@ -98,7 +107,12 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
   const handleSave = async () => {
     try {
       setSaving(true);
-      // 1. If items exist, sync item production with backend
+      // 1. Save reference documents (PR/PO/SI/OR/DR) if they changed
+      if (documentsChanged(documents, order)) {
+        await updateOrderDocuments(order.id, toDocumentPayload(documents));
+      }
+
+      // 2. If items exist, sync item production with backend
       if (items.length > 0) {
         await updateItemProduction(order.id, {
           items: items.map((it) => ({
@@ -109,7 +123,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
         });
       }
 
-      // 2. Call parent onSave to update local state and emit events
+      // 3. Call parent onSave to update local state and emit events
       onSave(order.id, {
         amountPaid: numericAmountPaid,
         paymentStatus,
@@ -121,7 +135,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
       onClose();
     } catch (err) {
       console.error("Failed to save order updates:", err);
-      alert("Failed to save production updates. Please try again.");
+      alert(`Failed to save order updates: ${err instanceof Error ? err.message : "Please try again."}`);
     } finally {
       setSaving(false);
     }
@@ -131,7 +145,7 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
     <Modal
       open={!!order}
       onClose={onClose}
-      title={`Production Tracking · ${order.refNo}`}
+      title={`Production Tracking · SOA ${order.soaNo}`}
       subtitle={`${order.customerName} — ${order.product}`}
       wide
     >
@@ -334,6 +348,16 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
               <option value="paid">Fully Paid</option>
             </select>
           </div>
+        </div>
+
+        {/* Statement of Account & Reference Documents */}
+        <div className="rounded-xl border border-slate-200 p-4 space-y-4">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <FileText className="h-4 w-4 text-sky-600" />
+            Statement of Account & Reference Documents
+          </h4>
+          <SoaSummary soaNo={order.soaNo} soaDate={order.soaDate} />
+          <OrderDocumentFields value={documents} onChange={setDocuments} />
         </div>
 
         {overallProgress >= 100 && (

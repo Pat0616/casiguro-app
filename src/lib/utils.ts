@@ -20,6 +20,13 @@ export function formatDate(iso?: string): string {
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// MM/DD/YYYY, the format used on SOA and other printed documents
+export function formatDocDate(iso?: string | null): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${m}/${d}/${y}`;
+}
+
 export function daysDiff(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);
   const target = new Date(y, m - 1, d);

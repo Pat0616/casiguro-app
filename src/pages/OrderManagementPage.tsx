@@ -30,9 +30,10 @@ function formatCurrency(n: number) {
 interface OrderManagementPageProps {
   orders: Order[];
   onCreateOrder: (data: NewOrderFormData) => void;
+  onOrderSaved: (order: Order) => void;
 }
 
-export default function OrderManagementPage({ orders, onCreateOrder }: OrderManagementPageProps) {
+export default function OrderManagementPage({ orders, onCreateOrder, onOrderSaved }: OrderManagementPageProps) {
   const [activeTab, setActiveTab] = useState<"quotations" | "orders">("orders");
 
   // Orders Tab State
@@ -79,20 +80,8 @@ export default function OrderManagementPage({ orders, onCreateOrder }: OrderMana
   };
 
   const handleConvertedToOrder = (newOrder: Order) => {
-    // Notify parent to refresh or add to order list
-    onCreateOrder({
-      customerName: newOrder.customerName,
-      contactNumber: newOrder.contactNumber,
-      product: newOrder.product,
-      category: newOrder.category,
-      quantity: newOrder.quantity,
-      unitPrice: newOrder.unitPrice,
-      notes: newOrder.notes,
-      dateOrdered: newOrder.dateOrdered,
-      dueDate: newOrder.dueDate,
-      orderType: newOrder.orderType,
-      items: newOrder.items,
-    });
+    // The backend already created the order during conversion; only add it to the list
+    onOrderSaved(newOrder);
     fetchQuotations();
   };
 

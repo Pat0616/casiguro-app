@@ -188,7 +188,7 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
                             {o.customerName}
                           </span>
                           <span className="font-mono text-xs font-semibold text-slate-400">
-                            ({o.refNo})
+                            (SOA {o.soaNo})
                           </span>
                         </div>
                         {o.contactNumber && (

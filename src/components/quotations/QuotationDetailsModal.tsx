@@ -112,7 +112,7 @@ export default function QuotationDetailsModal({
         ...quotation,
         status: "accepted",
         convertedOrderId: res.order.id,
-        convertedOrderRef: res.order.refNo,
+        convertedOrderRef: res.order.soaNo,
       });
       setShowConvertPrompt(false);
       onClose();
