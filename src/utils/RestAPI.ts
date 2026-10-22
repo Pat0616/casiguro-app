@@ -1,6 +1,6 @@
 // src/api/api.ts
 
-const BASE_URL = "http://localhost:5000"; // your backend port
+export const BASE_URL = "http://localhost:5000"; // your backend port
 
 // A wrapper for fetch
 export async function apiRequest(

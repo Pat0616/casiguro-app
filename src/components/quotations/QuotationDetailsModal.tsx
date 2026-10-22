@@ -15,11 +15,13 @@ import {
   Boxes,
   Briefcase,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import type { Quotation, Order } from "@/types";
 import {
   updateQuotationStatus,
   acceptAndConvertToOrder,
+  getQuotationPdf,
 } from "@/utils/quotationAPI";
 
 function formatCurrency(n: number) {
@@ -59,7 +61,34 @@ export default function QuotationDetailsModal({
   const [showRejectPrompt, setShowRejectPrompt] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  const [pdfLoading, setPdfLoading] = useState<"view" | "download" | null>(null);
+
   if (!open || !quotation) return null;
+
+  const handlePdf = async (mode: "view" | "download") => {
+    // Open the tab before awaiting so the browser doesn't treat it as a blocked popup
+    const tab = mode === "view" ? window.open("", "_blank") : null;
+    try {
+      setPdfLoading(mode);
+      setActionError(null);
+      const url = URL.createObjectURL(await getQuotationPdf(quotation.id));
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Quotation-${quotation.quoteNo}.pdf`;
+        link.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      tab?.close();
+      console.error("Quotation PDF error:", err);
+      setActionError(err.message || "Failed to generate quotation PDF");
+    } finally {
+      setPdfLoading(null);
+    }
+  };
 
   const handleSendQuote = async () => {
     try {
@@ -357,7 +386,27 @@ export default function QuotationDetailsModal({
 
         {/* Modal Actions */}
         <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-xs text-slate-400">Created by {quotation.createdBy || "Staff"}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-xs text-slate-400">Created by {quotation.createdBy || "Staff"}</span>
+            <button
+              type="button"
+              onClick={() => handlePdf("view")}
+              disabled={pdfLoading !== null}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-sky-700 disabled:opacity-50"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              {pdfLoading === "view" ? "Generating..." : "View PDF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePdf("download")}
+              disabled={pdfLoading !== null}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-sky-700 disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {pdfLoading === "download" ? "Generating..." : "Download PDF"}
+            </button>
+          </div>
 
           <div className="flex items-center justify-end gap-2.5">
             <button

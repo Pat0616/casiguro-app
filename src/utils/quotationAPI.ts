@@ -1,5 +1,5 @@
 // casiguro-app/src/utils/quotationAPI.ts
-import { apiRequest } from "./RestAPI";
+import { apiRequest, BASE_URL } from "./RestAPI";
 import type { Quotation, QuotationItem, QuotationStatus, Order } from "@/types";
 
 export interface NewQuotationPayload {
@@ -25,6 +25,16 @@ export function getQuotations(params?: {
 
 export function getQuotationById(id: string): Promise<Quotation> {
   return apiRequest(`/api/quotations/${id}`, { method: "GET" });
+}
+
+// Printable PRICE QUOTATION, generated server-side by Puppeteer
+export async function getQuotationPdf(id: string): Promise<Blob> {
+  const response = await fetch(`${BASE_URL}/api/quotations/${id}/pdf`, { credentials: "include" });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to generate quotation PDF");
+  }
+  return response.blob();
 }
 
 export function createQuotation(payload: NewQuotationPayload): Promise<Quotation> {
