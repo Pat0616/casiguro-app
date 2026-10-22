@@ -131,38 +131,46 @@ export default function CatalogShoppingGrid({
           <p className="mt-1 text-xs text-slate-500">Try another search or item type.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        // Compact cards so large catalogs need less scrolling: up to 6 per row on wide screens
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {filteredItems.map((item) => {
             const count = cartCounts[item.id] || 0;
             const variants = item.variants || [];
             const selectedVariant = variants.find((variant) => variant.name === selectedVariants[item.id]);
+            const canAdd = variants.length === 0 || Boolean(selectedVariant);
             return (
               <article
                 key={item.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
+                className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-sky-200 hover:shadow-md"
               >
-                <div className="relative aspect-[16/9] bg-slate-100">
+                <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                    // Absolutely positioned so tall images can't stretch the 4:3 box (and with it the whole row)
+                    <img src={item.imageUrl} alt={item.name} className="absolute inset-0 h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-slate-400">
-                      <ImageIcon className="h-10 w-10" aria-hidden="true" />
+                    <div className="flex h-full items-center justify-center text-slate-300">
+                      <ImageIcon className="h-7 w-7" aria-hidden="true" />
                     </div>
                   )}
-                  <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                    {item.type === "service" && <Briefcase className="h-3 w-3" />}
-                    {item.type === "service" ? "Service" : "Product"}
-                  </span>
+                  {item.type === "service" && (
+                    <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-white/95 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 shadow-sm">
+                      <Briefcase className="h-2.5 w-2.5" />
+                      Service
+                    </span>
+                  )}
                   {count > 0 && (
-                    <span className="absolute right-2 top-2 rounded-full bg-sky-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-                      In cart: {count}
+                    <span
+                      className="absolute right-1.5 top-1.5 rounded-full bg-sky-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm"
+                      title={`${count} in cart`}
+                    >
+                      ×{count}
                     </span>
                   )}
                 </div>
-                <div className="space-y-2 p-3">
-                  <div className="min-h-10">
-                    <h4 className="line-clamp-2 text-sm font-extrabold text-slate-900">{item.name}</h4>
-                    <p className="mt-0.5 text-[11px] text-slate-500">{item.categoryName || "General"}</p>
+                <div className="flex flex-1 flex-col gap-1.5 p-2">
+                  <div>
+                    <h4 className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-slate-900" title={item.name}>{item.name}</h4>
+                    <p className="truncate text-[10px] text-slate-500">{item.categoryName || "General"}</p>
                   </div>
                   {variants.length > 0 && (
                     <select
@@ -171,7 +179,7 @@ export default function CatalogShoppingGrid({
                       onChange={(event) =>
                         setSelectedVariants((current) => ({ ...current, [item.id]: event.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      className="w-full rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                     >
                       <option value="">Select option</option>
                       {variants.map((variant) => (
@@ -181,15 +189,17 @@ export default function CatalogShoppingGrid({
                       ))}
                     </select>
                   )}
-                  <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-                    <span className="font-mono text-xs font-bold text-slate-900">
+                  <div className="mt-auto flex items-center justify-between gap-1 border-t border-slate-100 pt-1.5">
+                    <span className="truncate font-mono text-[11px] font-bold text-slate-900">
                       {formatCurrency(selectedVariant?.price ?? item.basePrice)}
                     </span>
                     <button
                       type="button"
                       onClick={() => onAdd(item, selectedVariant)}
-                      disabled={variants.length > 0 && !selectedVariant}
-                      className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!canAdd}
+                      aria-label={`Add ${item.name} to cart`}
+                      title={canAdd ? "Add to cart" : "Select an option first"}
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-sky-600 px-1.5 py-1 text-[11px] font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Plus className="h-3 w-3" />
                       Add
