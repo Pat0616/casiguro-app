@@ -1,27 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  AlertCircle,
-  Briefcase,
-  Calendar,
-  Check,
-  Image as ImageIcon,
-  Phone,
-  Plus,
-  Save,
-  ShoppingCart,
-  Send,
-  Trash2,
-  User,
-} from "lucide-react";
+import { AlertCircle, Calendar, Check, Phone, Plus, Save, Send, User } from "lucide-react";
 import type { CatalogItem, Quotation, QuotationItem } from "@/types";
 import { getCatalogItems } from "@/utils/catalogAPI";
 import { createQuotation, type NewQuotationPayload } from "@/utils/quotationAPI";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { formatCurrency } from "@/lib/utils";
-import { CATEGORIES } from "@/lib/constants";
-import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
-import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
+import CatalogPickerPanel from "@/components/catalog/CatalogPickerPanel";
+import QuotationItemsTable from "@/components/quotations/QuotationItemsTable";
 
 interface NewQuotationModalProps {
   open: boolean;
@@ -72,7 +58,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
   const [formError, setFormError] = useState<string | null>(null);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const [mobileCatalogOpen, setMobileCatalogOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -289,7 +275,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
   const handleClose = () => {
     if (saving) return;
     setStep(1);
-    setMobileCartOpen(false);
+    setMobileCatalogOpen(false);
     setFormError(null);
     onClose();
   };
@@ -329,99 +315,39 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden py-3">
           {step === 1 ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5">
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1 lg:flex-none">
-                <CatalogShoppingGrid items={catalogItems} loading={loadingCatalog} cartCounts={cartCounts} onAdd={handleAddCatalogItem} />
-              </div>
-              <div className="hidden min-h-0 lg:block">
-                <ShoppingCartPanel
-                  className="h-full"
+            <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,65fr)_minmax(0,35fr)] lg:gap-5">
+              <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <QuotationItemsTable
                   items={items}
-                  catalogItems={catalogItems}
                   totalQuantity={totalQuotationQuantity}
                   totalAmount={totalQuotationAmount}
                   onAddCustom={() => setItems((prev) => [...prev, makeCartItem()])}
                   onChange={handleChangeItem}
                   onRemove={(tempId) => setItems((prev) => prev.filter((item) => item.tempId !== tempId))}
-                  onContinue={handleContinue}
-                  continueLabel="Quotation details"
                 />
-              </div>
-              <section className="hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-slate-900">Your cart <span className="text-slate-400">({items.length})</span></h3>
-                    <p className="text-xs text-slate-500">Confirm quantities, adjusted prices, and reasons before continuing.</p>
-                  </div>
-                  <button type="button" onClick={() => setItems((prev) => [...prev, makeCartItem()])} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"><Plus className="h-3.5 w-3.5" />Add custom item</button>
+                <div className="flex shrink-0 items-center justify-end gap-2">
+                  <button type="button" onClick={() => setMobileCatalogOpen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 lg:hidden">
+                    <Plus className="h-4 w-4" /> Add from catalog
+                  </button>
+                  <button type="button" onClick={handleContinue} className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700">
+                    Continue to quotation details →
+                  </button>
                 </div>
-                {items.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">Your cart is empty. Add a product or service to begin.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {items.map((item) => {
-                      const catalogItem = catalogItems.find((catalog) => catalog.id === item.productServiceId);
-                      const adjusted = !item.isCustom && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
-                      return (
-                        <div key={item.tempId} className="grid gap-4 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-[88px_minmax(0,1fr)_auto]">
-                          <div className="h-20 w-full overflow-hidden rounded-lg bg-slate-100 sm:w-[88px]">
-                            {catalogItem?.imageUrl ? <img src={catalogItem.imageUrl} alt={item.itemName} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-6 w-6" /></div>}
-                          </div>
-                          <div className="min-w-0 space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                {item.isCustom ? (
-                                  <div className="space-y-2">
-                                    <input value={item.itemName} onChange={(event) => handleChangeItem(item.tempId, "itemName", event.target.value)} placeholder="Custom item name" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold" />
-                                    <select value={item.category || "General"} onChange={(event) => handleChangeItem(item.tempId, "category", event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
-                                      {CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
-                                    </select>
-                                  </div>
-                                ) : <p className="font-semibold text-slate-900">{item.itemName}</p>}
-                                {item.selectedVariant && <p className="mt-0.5 text-xs font-semibold text-sky-700">Option: {item.selectedVariant}</p>}
-                                <p className="mt-1 text-xs text-slate-500">{item.isCustom ? "Custom item" : <>{item.itemType === "service" && <Briefcase className="mr-1 inline h-3 w-3" />}{item.itemType === "service" ? "Service" : "Product"} · Base {formatCurrency(item.basePrice)}</>}</p>
-                              </div>
-                              <button type="button" onClick={() => setItems((prev) => prev.filter((line) => line.tempId !== item.tempId))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${item.itemName || "custom item"}`}><Trash2 className="h-4 w-4" /></button>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-3">
-                              <label className="text-xs font-semibold text-slate-600">Quantity<input type="number" min="1" value={item.quantity} onChange={(event) => handleChangeItem(item.tempId, "quantity", event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
-                              <label className="text-xs font-semibold text-slate-600">Final unit price<input type="number" min="0" step="0.01" value={item.finalUnitPrice} onChange={(event) => handleChangeItem(item.tempId, "finalUnitPrice", event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm ${adjusted ? "border-amber-400 bg-amber-50" : "border-slate-200"}`} /></label>
-                              <div className="text-xs font-semibold text-slate-600">Subtotal<p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-900">{formatCurrency(item.subtotal)}</p></div>
-                            </div>
-                            {adjusted && <label className="block text-xs font-semibold text-amber-800">Price adjustment reason<input value={item.priceAdjustmentReason || ""} onChange={(event) => handleChangeItem(item.tempId, "priceAdjustmentReason", event.target.value)} placeholder="Required when price differs from catalog price" className="mt-1 w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" /></label>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-
-              <div className="sticky bottom-0 z-10 -mx-2 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 p-2 backdrop-blur lg:hidden">
-                <button type="button" onClick={() => setMobileCartOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700">
-                  <ShoppingCart className="h-4 w-4" /> Cart ({items.length}) · {formatCurrency(totalQuotationAmount)}
-                </button>
-                <button type="button" onClick={handleContinue} className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white">Continue →</button>
+              </div>
+              <div className="hidden min-h-0 lg:block">
+                <CatalogPickerPanel className="h-full" items={catalogItems} loading={loadingCatalog} cartCounts={cartCounts} onAdd={handleAddCatalogItem} />
               </div>
 
-              {mobileCartOpen && (
+              {mobileCatalogOpen && (
                 <div className="fixed inset-0 z-[70] bg-slate-900/50 p-3 lg:hidden">
-                  <div className="mx-auto flex h-full max-w-lg flex-col">
-                    <ShoppingCartPanel
+                  <div className="mx-auto flex h-full max-w-md flex-col">
+                    <CatalogPickerPanel
                       className="flex-1"
-                      items={items}
-                      catalogItems={catalogItems}
-                      totalQuantity={totalQuotationQuantity}
-                      totalAmount={totalQuotationAmount}
-                      onAddCustom={() => setItems((prev) => [...prev, makeCartItem()])}
-                      onChange={handleChangeItem}
-                      onRemove={(tempId) => setItems((prev) => prev.filter((item) => item.tempId !== tempId))}
-                      onContinue={() => {
-                        setMobileCartOpen(false);
-                        handleContinue();
-                      }}
-                      continueLabel="Quotation details"
-                      onClose={() => setMobileCartOpen(false)}
+                      items={catalogItems}
+                      loading={loadingCatalog}
+                      cartCounts={cartCounts}
+                      onAdd={handleAddCatalogItem}
+                      onClose={() => setMobileCatalogOpen(false)}
                     />
                   </div>
                 </div>
@@ -455,7 +381,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
                 </div>
                 <div className="mt-3 flex justify-between text-sm font-bold"><span>Total</span><span>{formatCurrency(totalQuotationAmount)}</span></div>
                 <p className="mt-1 text-xs text-slate-500">{totalQuotationQuantity} total units</p>
-                <button type="button" onClick={() => setStep(1)} className="mt-4 text-xs font-semibold text-sky-700 hover:text-sky-800">← Back to cart</button>
+                <button type="button" onClick={() => setStep(1)} className="mt-4 text-xs font-semibold text-sky-700 hover:text-sky-800">← Edit items</button>
               </aside>
             </div>
           )}
