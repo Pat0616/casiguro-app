@@ -111,11 +111,10 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
                   <th className="px-5 py-3">SOA No / Date</th>
-                  <th className="px-5 py-3">PO / DR / SI-OR</th>
                   <th className="px-5 py-3">Customer</th>
                   <th className="px-5 py-3">Product</th>
                   <th className="px-5 py-3">Category</th>
@@ -132,17 +131,6 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
                       <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs">
                         <span className="block font-bold text-slate-700">{o.soaNo}</span>
                         <span className="text-slate-400">{formatDocDate(o.soaDate)}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-slate-500">
-                        {o.poNo || o.drNo || o.siOrNo ? (
-                          <>
-                            {o.poNo && <span className="block">PO {o.poNo}</span>}
-                            {o.drNo && <span className="block">DR {o.drNo}</span>}
-                            {o.siOrNo && <span className="block">SI/OR {o.siOrNo}</span>}
-                          </>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
                       </td>
                       <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-800">{o.customerName}</td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{o.product}</td>
