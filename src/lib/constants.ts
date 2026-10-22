@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, ClipboardList, Factory, CheckCircle2, Users, BarChart3, Bell, PackageCheck,
+  LayoutDashboard, ClipboardList, Factory, CheckCircle2, Users, BarChart3, Bell, PackageCheck, UserCog,
 } from "lucide-react";
 import type { OrderStatus, PageKey, PaymentStatusKey } from "@/types";
 
@@ -19,8 +19,12 @@ export const NAV_ITEMS: { key: PageKey; label: string; icon: typeof LayoutDashbo
   { key: "completed", label: "Completed Transactions", icon: CheckCircle2 },
   { key: "customers", label: "Customer Overview", icon: Users },
   { key: "statistics", label: "Statistics", icon: BarChart3 },
+  { key: "accounts", label: "Accounts & Audit", icon: UserCog },
   { key: "notifications", label: "Notifications", icon: Bell },
 ];
+
+// Pages only admins can open (also enforced by ProtectedAdminRoute and server-side requireAdmin)
+export const ADMIN_PAGE_KEYS: PageKey[] = ["dashboard", "statistics", "products-services", "accounts"];
 
 export const CATEGORIES = [
   "Apparel",

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import '../styles/loginpage.css';
-import {useNavigate} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthenticationContext";
 import {login, getMe} from "../utils/authAPI";
 
@@ -247,13 +247,10 @@ export default function LoginPage() {
           </div>
 
 
-          {/* DIVIDER */}
-          <div className="divider">
-            
-          </div>
+          <p className="auth-switch">
+            Don't have an account? <Link to="/register">Create an account</Link>
+          </p>
 
-
-         
 
 
           <footer className="login-footer">

@@ -18,6 +18,11 @@ export async function apiRequest(
 
   const data = await response.json().catch(() => ({}));
 
+  // Session ended server-side (e.g. account deactivated): let the app sign the user out
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent("auth:expired", { detail: data.message }));
+  }
+
   if (!response.ok) {
     throw new Error(data.message || "API Error");
     console.log("API Failed");

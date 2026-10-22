@@ -10,7 +10,42 @@ export type PageKey =
   | "customers"
   | "statistics"
   | "notifications"
-  | "products-services";
+  | "products-services"
+  | "accounts";
+
+export type AccountStatus = "pending" | "active" | "rejected" | "deactivated";
+export type AuditCategory = "auth" | "account" | "order" | "payment" | "quotation" | "catalog";
+
+export interface Account {
+  id: string;
+  fullName: string;
+  email: string;
+  contactNumber: string;
+  role: "admin" | "employee";
+  status: AccountStatus;
+  registeredAt: string;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
+  statusReason: string | null;
+  lastLoginAt: string | null;
+  auditCount: number;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  action: string;
+  category: AuditCategory;
+  entityType: string | null;
+  entityId: string | null;
+  entityLabel: string | null;
+  description: string;
+  changes: Record<string, { from: unknown; to: unknown }> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
 
 export type CustomerPaymentFilter = "all" | "unpaid" | "partial" | "paid";
 export type CatalogItemType = "product" | "service";

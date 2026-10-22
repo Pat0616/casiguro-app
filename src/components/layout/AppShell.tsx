@@ -9,9 +9,10 @@ import { useAuth } from "@/context/AuthenticationContext";
 
 interface AppShellProps {
   unreadCount: number;
+  pendingAccountsCount: number;
 }
 
-export default function AppShell({ unreadCount }: AppShellProps) {
+export default function AppShell({ unreadCount, pendingAccountsCount }: AppShellProps) {
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
@@ -21,7 +22,7 @@ export default function AppShell({ unreadCount }: AppShellProps) {
     <div className="min-h-screen bg-slate-50">
       {/* Desktop fixed sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white md:block">
-        <Sidebar unreadCount={unreadCount} />
+        <Sidebar unreadCount={unreadCount} pendingAccountsCount={pendingAccountsCount} />
       </aside>
 
       {/* Mobile off-canvas sidebar */}
@@ -34,6 +35,7 @@ export default function AppShell({ unreadCount }: AppShellProps) {
             </button>
             <Sidebar
               unreadCount={unreadCount}
+              pendingAccountsCount={pendingAccountsCount}
               onNavigate={() => setMobileOpen(false)}
             />
           </div>

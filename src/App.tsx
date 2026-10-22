@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 
 import type { AppNotification, NewOrderFormData, Order, OrderUpdatePayload } from "@/types";
 import { getOrders, createOrder, updateOrder } from "@/utils/orderAPI";
@@ -8,10 +8,14 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/utils/notificationAPI";
-import { subscribeToNotifications, subscribeToOrders } from "@/utils/socket";
+import { subscribeToAccountChanges, subscribeToNotifications, subscribeToOrders } from "@/utils/socket";
+import { getPendingAccountCount } from "@/utils/accountAPI";
+import { getMe } from "@/utils/authAPI";
 
 import AppShell from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import AccountsPage from "@/pages/AccountsPage";
 import DashboardPage from "@/pages/DashboardPage";
 import OrderManagementPage from "@/pages/OrderManagementPage";
 import ProductionMonitoringPage from "@/pages/ProductionMonitoringPage";
@@ -27,15 +31,52 @@ import ProtectedRoute from "./routes/ProtectedRoutes";
 import ProtectedAdminRoute from "./routes/ProtectedAdminRoute";
 
 function MainApp() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [pendingAccountsCount, setPendingAccountsCount] = useState(0);
   const [toast, setToast] = useState("");
 
   const flashToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
   };
+
+  // Account lifecycle: keep the admin's pending-registration badge live, and react immediately when an admin
+  // changes *this* user's account (deactivated -> signed out, promoted -> admin menu appears)
+  useEffect(() => {
+    if (!user) return;
+    const isAdmin = user.role === "admin";
+    const refreshPending = () => {
+      if (isAdmin) getPendingAccountCount().then((r) => setPendingAccountsCount(r.pendingCount)).catch(() => undefined);
+    };
+    refreshPending();
+
+    const signOut = (message: string) => {
+      setUser(null);
+      navigate("/login");
+      flashToast(message);
+    };
+
+    const unsubscribe = subscribeToAccountChanges(({ userId }) => {
+      refreshPending();
+      if (userId !== user.id) return;
+      getMe()
+        .then((me) => setUser(me))
+        .catch(() => signOut("Your account is no longer active. Please contact an administrator."));
+    });
+
+    const handleExpired = (event: Event) => {
+      signOut((event as CustomEvent<string>).detail || "Your session has ended. Please sign in again.");
+    };
+    window.addEventListener("auth:expired", handleExpired);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("auth:expired", handleExpired);
+    };
+  }, [user?.id, user?.role]);
 
   // Load orders and persistent notifications from database when authenticated
   useEffect(() => {
@@ -151,9 +192,10 @@ function MainApp() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route element={<AppShell unreadCount={unreadCount} />}>
+          <Route element={<AppShell unreadCount={unreadCount} pendingAccountsCount={pendingAccountsCount} />}>
             <Route
               path="/orders"
               element={
@@ -184,6 +226,7 @@ function MainApp() {
               <Route path="/dashboard" element={<DashboardPage orders={orders} />} />
               <Route path="/statistics" element={<StatisticsPage orders={orders} />} />
               <Route path="/products-services" element={<ProductServiceCatalogPage />} />
+              <Route path="/accounts" element={<AccountsPage onPendingCountChange={setPendingAccountsCount} />} />
             </Route>
           </Route>
         </Route>

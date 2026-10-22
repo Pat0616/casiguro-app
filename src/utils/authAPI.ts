@@ -9,11 +9,11 @@ export function login(email: string, password: string) {
   });
 }
 
-// Register user
-export function register(full_name: string, password: string, email: string) {
+// Register user — the account is created as a pending employee until an admin approves it
+export function register(details: { full_name: string; email: string; contact_number: string; password: string }) {
   return apiRequest("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ full_name, password, email }),
+    body: JSON.stringify(details),
   });
 }
 

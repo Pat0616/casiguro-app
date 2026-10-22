@@ -52,6 +52,14 @@ export function subscribeToOrders(
   };
 }
 
+export function subscribeToAccountChanges(onChange: (change: { userId: string; status: string }) => void) {
+  const s = getSocket();
+  s.on("account:changed", onChange);
+  return () => {
+    s.off("account:changed", onChange);
+  };
+}
+
 export function subscribeToNotifications(
   onNotification: (notification: AppNotification) => void
 ) {

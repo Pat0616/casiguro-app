@@ -1,7 +1,7 @@
 import { LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "@/lib/constants";
+import { ADMIN_PAGE_KEYS, NAV_ITEMS } from "@/lib/constants";
 import Avatar from "@/components/ui/Avatar";
 import { useNavigate } from "react-router-dom";
 import { logout } from "@/utils/authAPI";
@@ -9,21 +9,23 @@ import { useAuth } from "@/context/AuthenticationContext";
 
 interface SidebarProps {
   unreadCount: number;
+  pendingAccountsCount: number;
   onNavigate?: () => void;
 }
 
-export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
+export default function Sidebar({ onNavigate, unreadCount, pendingAccountsCount }: SidebarProps) {
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const visibleNavItems = NAV_ITEMS.filter(
-    (item) => user?.role === "admin" || !["dashboard", "statistics", "products-services"].includes(item.key)
+    (item) => user?.role === "admin" || !ADMIN_PAGE_KEYS.includes(item.key)
   );
 
   const EnterLogout = async () =>
   {
-    const res = logout();
-    console.log("logout", res);
+    // Await so the server can record the sign-out before the cookie is cleared
+    await logout().catch(() => undefined);
+    setUser(null);
     navigate('/login')
   }
 
@@ -35,6 +37,8 @@ export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
       <nav className="flex-1 space-y-1 px-3">
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
+          const badge =
+            item.key === "notifications" ? unreadCount : item.key === "accounts" ? pendingAccountsCount : 0;
           return (
             <NavLink
               key={item.key}
@@ -53,8 +57,16 @@ export default function Sidebar({ onNavigate, unreadCount }: SidebarProps) {
                     <Icon className={cn("h-4 w-4", isActive ? "text-sky-600" : "text-slate-400")} />
                     {item.label}
                   </span>
-                  {item.key === "notifications" && unreadCount > 0 && (
-                    <span className="rounded-full bg-sky-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadCount}</span>
+                  {badge > 0 && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white",
+                        item.key === "accounts" ? "bg-amber-500" : "bg-sky-600"
+                      )}
+                      title={item.key === "accounts" ? `${badge} registration${badge === 1 ? "" : "s"} awaiting approval` : undefined}
+                    >
+                      {badge}
+                    </span>
                   )}
                 </>
               )}
