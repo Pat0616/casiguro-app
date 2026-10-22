@@ -14,10 +14,13 @@ import { inputClass } from "@/components/ui/Field";
 
 export default function StatisticsPage({ orders }: { orders: Order[] }) {
   const completed = orders.filter((o) => o.status === "completed" && o.dateCompleted);
-  const years = Array.from(new Set(completed.map((o) => o.dateCompleted!.slice(0, 4)))).sort((a, b) => (a < b ? 1 : -1));
+  // Default to the current period; always offer the current year even before anything completes in it
+  const now = new Date();
+  const currentYear = String(now.getFullYear());
+  const years = Array.from(new Set([currentYear, ...completed.map((o) => o.dateCompleted!.slice(0, 4))])).sort((a, b) => (a < b ? 1 : -1));
   const [mode, setMode] = useState<"year" | "month">("year");
-  const [year, setYear] = useState(years[0] || "2026");
-  const [month, setMonth] = useState("8");
+  const [year, setYear] = useState(currentYear);
+  const [month, setMonth] = useState(String(now.getMonth() + 1));
 
   const inPeriod = completed.filter((o) => {
     const [y, m] = o.dateCompleted!.split("-");
@@ -118,7 +121,7 @@ export default function StatisticsPage({ orders }: { orders: Order[] }) {
               </select>
             )}
             <select className={inputClass} value={year} onChange={(e) => setYear(e.target.value)}>
-              {(years.length ? years : ["2026"]).map((y) => (
+              {years.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>

@@ -1,21 +1,26 @@
 import { useMemo } from "react";
 import { Boxes, CalendarClock, TrendingUp, Wallet } from "lucide-react";
-import { cn, daysDiff, formatCurrency, formatDate } from "@/lib/utils";
-import { GRADIENT, NOW, ORDER_STATUS } from "@/lib/constants";
+import { cn, daysDiff, formatCurrency, formatDate, isoDate } from "@/lib/utils";
+import { GRADIENT, ORDER_STATUS } from "@/lib/constants";
 import type { Order } from "@/types";
+import { useAuth } from "@/context/AuthenticationContext";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 
 export default function DashboardPage({ orders }: { orders: Order[] }) {
+  const { user } = useAuth();
+  const today = new Date();
+
   const stats = useMemo(() => {
     const active = orders.filter((o) => o.status !== "completed");
     const dueThisWeek = active.filter((o) => {
       const d = daysDiff(o.dueDate);
       return d >= 0 && d <= 7;
     });
-    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+    // Local date, not toISOString() (UTC), so the month flips at local midnight
+    const currentMonthPrefix = isoDate(new Date()).slice(0, 7);
     const revenueThisMonth = orders
       .filter((o) => o.dateOrdered && o.dateOrdered.slice(0, 7) === currentMonthPrefix)
       .reduce((sum, o) => sum + (Number(o.amountPaid) || 0), 0);
@@ -52,9 +57,11 @@ export default function DashboardPage({ orders }: { orders: Order[] }) {
     <div className="space-y-6">
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-pink-600">Overview</p>
-        <h2 className="font-display text-2xl font-extrabold text-slate-900">Welcome back, Admin 👋</h2>
+        <h2 className="font-display text-2xl font-extrabold text-slate-900">
+          Welcome back{user?.full_name ? `, ${user.full_name.split(" ")[0]}` : ""} 👋
+        </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Here's what's happening across the shop today, {NOW.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}.
+          Here's what's happening across the shop today, {today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}.
         </p>
       </div>
 
