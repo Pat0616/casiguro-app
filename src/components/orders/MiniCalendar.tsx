@@ -17,7 +17,7 @@ export default function MiniCalendar({ orders, selectedDate, onSelectDate }: Min
   const ordersByDate = useMemo(() => {
     const map: Record<string, Order[]> = {};
     orders
-      .filter((o) => o.status !== "completed")
+      .filter((o) => o.status !== "completed" && o.status !== "cancelled")
       .forEach((o) => {
         map[o.dueDate] = map[o.dueDate] || [];
         map[o.dueDate].push(o);

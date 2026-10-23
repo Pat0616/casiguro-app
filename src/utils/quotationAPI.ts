@@ -1,6 +1,6 @@
 // casiguro-app/src/utils/quotationAPI.ts
 import { apiRequest, BASE_URL } from "./RestAPI";
-import type { Quotation, QuotationItem, QuotationStatus, Order } from "@/types";
+import type { Quotation, QuotationItem, QuotationStatus, Order, PaymentInput } from "@/types";
 
 export interface NewQuotationPayload {
   customerName: string;
@@ -64,7 +64,7 @@ export function updateQuotationStatus(
 
 export function acceptAndConvertToOrder(
   id: string,
-  payload?: { dueDate?: string; notes?: string }
+  payload?: { dueDate?: string; notes?: string; downPayment?: PaymentInput }
 ): Promise<{ message: string; order: Order }> {
   return apiRequest(`/api/quotations/${id}/accept-and-convert`, {
     method: "POST",

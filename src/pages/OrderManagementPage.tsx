@@ -192,7 +192,7 @@ export default function OrderManagementPage({ orders, onCreateOrder, onOrderSave
           }`}
         >
           <CalendarIcon className="h-4 w-4" />
-          Active Orders & Deadlines ({orders.filter((order) => order.status !== "completed").length})
+          Active Orders & Deadlines ({orders.filter((order) => order.status !== "completed" && order.status !== "cancelled").length})
         </button>
       </div>
 

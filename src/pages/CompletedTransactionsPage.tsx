@@ -22,17 +22,20 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
   const [year, setYear] = useState("all");
-  const [paymentFilter, setPaymentFilter] = useState<CustomerPaymentFilter>("all");
+  // "cancelled" switches the list to cancelled orders (kept on record, dated by when they were cancelled)
+  const [paymentFilter, setPaymentFilter] = useState<CustomerPaymentFilter | "cancelled">("all");
+  const showCancelled = paymentFilter === "cancelled";
+  const recordDate = (o: Order) => (showCancelled ? o.cancelledAt?.slice(0, 10) : o.dateCompleted) || "";
 
-  const completed = orders.filter((o) => o.status === "completed" && o.dateCompleted);
-  const years = Array.from(new Set(completed.map((o) => o.dateCompleted!.slice(0, 4)))).sort((a, b) => (a < b ? 1 : -1));
+  const completed = orders.filter((o) => (showCancelled ? o.status === "cancelled" : o.status === "completed") && recordDate(o));
+  const years = Array.from(new Set(completed.map((o) => recordDate(o).slice(0, 4)))).sort((a, b) => (a < b ? 1 : -1));
 
   const filtered = completed
     .filter((o) => {
-      const [y, m] = o.dateCompleted!.split("-");
+      const [y, m] = recordDate(o).split("-");
       const matchYear = year === "all" || y === year;
       const matchMonth = month === "all" || Number(m) === Number(month);
-      const matchPayment = paymentFilter === "all" || o.paymentStatus === paymentFilter;
+      const matchPayment = paymentFilter === "all" || showCancelled || o.paymentStatus === paymentFilter;
       const q = query.toLowerCase();
       const matchQuery =
         !q ||
@@ -41,16 +44,17 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
         o.category.toLowerCase().includes(q) ||
         [o.soaNo, o.prNo, o.poNo, o.siOrNo, o.drNo].some((ref) => ref?.toLowerCase().includes(q)) ||
         (o.items && o.items.some((it) => it.itemName.toLowerCase().includes(q))) ||
-        formatDate(o.dateCompleted).toLowerCase().includes(q);
+        formatDate(recordDate(o)).toLowerCase().includes(q);
       return matchYear && matchMonth && matchPayment && matchQuery;
     })
-    .sort((a, b) => (a.dateCompleted! < b.dateCompleted! ? 1 : -1));
+    .sort((a, b) => (recordDate(a) < recordDate(b) ? 1 : -1));
 
-  const paymentFilters: { key: CustomerPaymentFilter; label: string }[] = [
+  const paymentFilters: { key: CustomerPaymentFilter | "cancelled"; label: string }[] = [
     { key: "all", label: "All Payments" },
     { key: "unpaid", label: "Unpaid" },
     { key: "partial", label: "Partially Paid" },
     { key: "paid", label: "Paid" },
+    { key: "cancelled", label: "Cancelled Orders" },
   ];
 
   return (
@@ -107,7 +111,11 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
       <Card className="overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-6">
-            <EmptyState icon={CheckCircle2} title="No completed transactions" subtitle="Try a different filter or search term." />
+            <EmptyState
+              icon={CheckCircle2}
+              title={showCancelled ? "No cancelled orders" : "No completed transactions"}
+              subtitle="Try a different filter or search term."
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -119,15 +127,15 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
                   <th className="px-5 py-3">Product</th>
                   <th className="px-5 py-3">Category</th>
                   <th className="px-5 py-3">Total</th>
-                  <th className="px-5 py-3">Completed</th>
-                  <th className="px-5 py-3">Payment</th>
+                  <th className="px-5 py-3">{showCancelled ? "Cancelled" : "Completed"}</th>
+                  <th className="px-5 py-3">{showCancelled ? "Reason" : "Payment"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((o) => {
                   const pcfg = PAYMENT_STATUS[o.paymentStatus];
                   return (
-                    <tr key={o.id} onClick={() => setSelected(o)} title="Edit reference documents" className="cursor-pointer transition hover:bg-slate-50">
+                    <tr key={o.id} onClick={() => setSelected(o)} title="Open documents and payments" className="cursor-pointer transition hover:bg-slate-50">
                       <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs">
                         <span className="block font-bold text-slate-700">{o.soaNo}</span>
                         <span className="text-slate-400">{formatDocDate(o.soaDate)}</span>
@@ -136,8 +144,16 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
                       <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{o.product}</td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-slate-500">{o.category}</td>
                       <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-800">{formatCurrency(o.totalPrice)}</td>
-                      <td className="whitespace-nowrap px-5 py-3.5 text-slate-500">{formatDate(o.dateCompleted)}</td>
-                      <td className="whitespace-nowrap px-5 py-3.5"><Badge config={pcfg} label={pcfg.label} /></td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-slate-500">{formatDate(recordDate(o))}</td>
+                      <td className="whitespace-nowrap px-5 py-3.5">
+                        {showCancelled ? (
+                          <span className="block max-w-[16rem] truncate text-xs text-slate-500" title={o.cancelReason || ""}>
+                            {o.cancelReason} {o.cancelledByName && <span className="text-slate-400">· {o.cancelledByName}</span>}
+                          </span>
+                        ) : (
+                          <Badge config={pcfg} label={pcfg.label} />
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

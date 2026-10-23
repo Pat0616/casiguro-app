@@ -14,17 +14,22 @@ export default function DashboardPage({ orders }: { orders: Order[] }) {
   const today = new Date();
 
   const stats = useMemo(() => {
-    const active = orders.filter((o) => o.status !== "completed");
+    const active = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
     const dueThisWeek = active.filter((o) => {
       const d = daysDiff(o.dueDate);
       return d >= 0 && d <= 7;
     });
+    // Money actually received this month: non-voided payments dated this month, on any order.
+    // EWT is left out because it is tax the client withheld, not cash received.
     // Local date, not toISOString() (UTC), so the month flips at local midnight
     const currentMonthPrefix = isoDate(new Date()).slice(0, 7);
     const revenueThisMonth = orders
-      .filter((o) => o.dateOrdered && o.dateOrdered.slice(0, 7) === currentMonthPrefix)
-      .reduce((sum, o) => sum + (Number(o.amountPaid) || 0), 0);
-    const outstanding = orders.filter((o) => o.paymentStatus !== "paid").reduce((sum, o) => sum + (Number(o.balance) || 0), 0);
+      .flatMap((o) => o.payments || [])
+      .filter((p) => !p.voidedAt && p.paymentType !== "ewt" && p.receivedOn.slice(0, 7) === currentMonthPrefix)
+      .reduce((sum, p) => sum + p.amount, 0);
+    const outstanding = orders
+      .filter((o) => o.status !== "cancelled" && o.paymentStatus !== "paid")
+      .reduce((sum, o) => sum + (Number(o.balance) || 0), 0);
     return { activeCount: active.length, dueThisWeek: dueThisWeek.length, revenueThisMonth, outstanding };
   }, [orders]);
 
@@ -49,7 +54,7 @@ export default function DashboardPage({ orders }: { orders: Order[] }) {
   const cards = [
     { label: "Active Orders", value: stats.activeCount, icon: Boxes, tint: "text-sky-600 bg-sky-50" },
     { label: "Due This Week", value: stats.dueThisWeek, icon: CalendarClock, tint: "text-amber-600 bg-amber-50" },
-    { label: "Revenue This Month", value: formatCurrency(stats.revenueThisMonth), icon: TrendingUp, tint: "text-emerald-600 bg-emerald-50" },
+    { label: "Collected This Month", value: formatCurrency(stats.revenueThisMonth), icon: TrendingUp, tint: "text-emerald-600 bg-emerald-50" },
     { label: "Outstanding Balance", value: formatCurrency(stats.outstanding), icon: Wallet, tint: "text-pink-600 bg-pink-50" },
   ];
 

@@ -41,7 +41,8 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
   const customers = useMemo(() => {
     const map = new Map<string, CustomerSummary>();
 
-    orders.forEach((order) => {
+    // Cancelled orders carry no sale and no debt, so they don't count toward a customer's standing
+    orders.filter((order) => order.status !== "cancelled").forEach((order) => {
       const nameKey = order.customerName.trim();
       if (!map.has(nameKey)) {
         map.set(nameKey, {

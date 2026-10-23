@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Factory, Search } from "lucide-react";
 import { cn, dueLabel } from "@/lib/utils";
 import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
-import type { Order, OrderStatus, OrderUpdatePayload } from "@/types";
+import type { Order, OrderStatus } from "@/types";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Badge from "@/components/ui/Badge";
@@ -13,7 +13,10 @@ import UpdateOrderModal from "@/components/orders/UpdateOrderModal";
 
 interface ProductionMonitoringPageProps {
   orders: Order[];
-  onUpdateOrder: (id: string, changes: OrderUpdatePayload) => void;
+  /** Merge an order the server changed (payment recorded/voided) */
+  onOrderChange: (order: Order) => void;
+  /** Production saved or order cancelled */
+  onOrderSaved: (order: Order) => void;
 }
 
 const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
@@ -23,12 +26,12 @@ const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
   { key: "ready", label: "Ready for Pickup" },
 ];
 
-export default function ProductionMonitoringPage({ orders, onUpdateOrder }: ProductionMonitoringPageProps) {
+export default function ProductionMonitoringPage({ orders, onOrderChange, onOrderSaved }: ProductionMonitoringPageProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [selected, setSelected] = useState<Order | null>(null);
 
-  const activeOrders = orders.filter((o) => o.status !== "completed");
+  const activeOrders = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
 
   const filtered = activeOrders.filter((o) => {
     const matchesFilter = filter === "all" || o.status === filter;
@@ -125,10 +128,8 @@ export default function ProductionMonitoringPage({ orders, onUpdateOrder }: Prod
       <UpdateOrderModal
         order={selected}
         onClose={() => setSelected(null)}
-        onSave={(id, changes) => {
-          onUpdateOrder(id, changes);
-          setSelected(null);
-        }}
+        onOrderChange={onOrderChange}
+        onSaved={onOrderSaved}
       />
     </div>
   );

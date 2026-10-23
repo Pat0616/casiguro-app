@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 
-import type { AppNotification, NewOrderFormData, Order, OrderUpdatePayload } from "@/types";
-import { getOrders, createOrder, updateOrder } from "@/utils/orderAPI";
+import type { AppNotification, NewOrderFormData, Order } from "@/types";
+import { getOrders, createOrder } from "@/utils/orderAPI";
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -141,25 +141,22 @@ function MainApp() {
     }
   };
 
-  const handleUpdateOrder = async (id: string, changes: OrderUpdatePayload) => {
-    try {
-      const updated = await updateOrder(id, changes);
-      setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
-      flashToast(
-        changes.status === "completed"
-          ? "Order marked Complete and moved to Completed Transactions."
-          : "Order updated successfully."
-      );
-    } catch (err: any) {
-      console.error("Update order failed:", err);
-      flashToast(`Failed to update order: ${err.message || "Unknown error"}`);
-    }
-  };
-
-  // Merge an order the server already saved (e.g. quotation conversion, document edits)
+  // Merge an order the server already saved (e.g. quotation conversion, document edits, payments)
   const handleOrderSaved = (saved: Order) => {
     setOrders((prev) =>
       prev.some((o) => o.id === saved.id) ? prev.map((o) => (o.id === saved.id ? saved : o)) : [saved, ...prev]
+    );
+  };
+
+  // Production Monitoring saved progress (or an admin cancelled the order)
+  const handleProductionSaved = (saved: Order) => {
+    handleOrderSaved(saved);
+    flashToast(
+      saved.status === "completed"
+        ? "Order marked Complete and moved to Completed Transactions."
+        : saved.status === "cancelled"
+          ? `SOA ${saved.soaNo} was cancelled.`
+          : "Order updated successfully."
     );
   };
 
@@ -205,7 +202,9 @@ function MainApp() {
             />
             <Route
               path="/production"
-              element={<ProductionMonitoringPage orders={orders} onUpdateOrder={handleUpdateOrder} />}
+              element={
+                <ProductionMonitoringPage orders={orders} onOrderChange={handleOrderSaved} onOrderSaved={handleProductionSaved} />
+              }
             />
             <Route
               path="/completed"

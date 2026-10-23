@@ -1,6 +1,6 @@
 // casiguro-app/src/utils/orderAPI.ts
 import { apiRequest } from "./RestAPI";
-import type { NewOrderFormData, Order, OrderDocuments, OrderUpdatePayload } from "@/types";
+import type { NewOrderFormData, Order, OrderDocuments, OrderUpdatePayload, PaymentInput } from "@/types";
 
 export function getOrders(): Promise<Order[]> {
   return apiRequest("/api/orders", { method: "GET" });
@@ -46,12 +46,26 @@ export function updateItemProduction(
   });
 }
 
-export function recordPayment(
-  orderId: string,
-  payload: { amount: number; paymentMethod?: string; note?: string }
-): Promise<{ message: string; payment: any; order: Order }> {
-  return apiRequest(`/api/orders/${orderId}/payment`, {
+// Payments: each call returns the full updated order (amount paid / balance / status are recomputed server-side)
+export function recordPayment(orderId: string, payment: PaymentInput): Promise<Order> {
+  return apiRequest(`/api/orders/${orderId}/payments`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payment),
+  });
+}
+
+// Admin only. The entry stays on record, marked voided, and stops counting toward the balance.
+export function voidPayment(orderId: string, paymentId: string, reason: string): Promise<Order> {
+  return apiRequest(`/api/orders/${orderId}/payments/${paymentId}/void`, {
+    method: "PATCH",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+// Admin only. Rejected while the order still has non-voided payments.
+export function cancelOrder(orderId: string, reason: string): Promise<Order> {
+  return apiRequest(`/api/orders/${orderId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
   });
 }

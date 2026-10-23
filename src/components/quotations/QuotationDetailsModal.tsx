@@ -23,6 +23,7 @@ import {
   acceptAndConvertToOrder,
   getQuotationPdf,
 } from "@/utils/quotationAPI";
+import PaymentFields, { EMPTY_PAYMENT_FORM, toPaymentInput, type PaymentForm } from "@/components/orders/PaymentFields";
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -56,6 +57,8 @@ export default function QuotationDetailsModal({
     return d.toISOString().slice(0, 10);
   });
   const [convertNotes, setConvertNotes] = useState("");
+  const [takeDownPayment, setTakeDownPayment] = useState(false);
+  const [downPayment, setDownPayment] = useState<PaymentForm>(EMPTY_PAYMENT_FORM);
 
   // Rejection prompt modal state
   const [showRejectPrompt, setShowRejectPrompt] = useState(false);
@@ -128,12 +131,19 @@ export default function QuotationDetailsModal({
   };
 
   const handleConfirmConvert = async () => {
+    if (takeDownPayment) {
+      const amount = Number(downPayment.amount);
+      if (!amount || amount <= 0) return setActionError("Enter the down payment amount, or untick the down payment.");
+      if (amount > quotation.totalAmount) return setActionError("The down payment can't be more than the quotation total.");
+      if (downPayment.method === "check" && !downPayment.referenceNo.trim()) return setActionError("Enter the check no.");
+    }
     try {
       setLoadingAction(true);
       setActionError(null);
       const res = await acceptAndConvertToOrder(quotation.id, {
         dueDate: convertDueDate,
         notes: convertNotes.trim() || undefined,
+        downPayment: takeDownPayment ? toPaymentInput({ ...downPayment, paymentType: "down_payment" }) : undefined,
       });
 
       onConvertedToOrder(res.order);
@@ -473,7 +483,7 @@ export default function QuotationDetailsModal({
       {/* Sub-modal: Conversion to Order Prompt */}
       {showConvertPrompt && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in duration-100">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in duration-100">
             <h3 className="text-base font-bold text-slate-900">Accept Proposal & Create Order</h3>
             <p className="text-xs text-slate-500 mt-1">
               This will atomically commit an operational transaction (Order) with all snapshot line items.
@@ -501,6 +511,28 @@ export default function QuotationDetailsModal({
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
+
+              <div className="rounded-xl border border-slate-200 p-3 space-y-3">
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={takeDownPayment}
+                    onChange={(e) => setTakeDownPayment(e.target.checked)}
+                    className="mt-0.5 accent-sky-600"
+                  />
+                  <span className="text-xs">
+                    <span className="block font-bold text-slate-700">Customer paid a down payment</span>
+                    <span className="text-slate-500">Total: {formatCurrency(quotation.totalAmount)}. Recorded on the new order.</span>
+                  </span>
+                </label>
+                {takeDownPayment && (
+                  <PaymentFields value={downPayment} onChange={setDownPayment} types={[]} maxAmount={quotation.totalAmount} />
+                )}
+              </div>
+
+              {actionError && (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{actionError}</p>
+              )}
             </div>
 
             <div className="mt-5 flex justify-end gap-2.5">

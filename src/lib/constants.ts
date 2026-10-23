@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, ClipboardList, Factory, CheckCircle2, Users, BarChart3, Bell, PackageCheck, UserCog,
 } from "lucide-react";
-import type { OrderStatus, PageKey, PaymentStatusKey } from "@/types";
+import type { OrderStatus, PageKey, PaymentMethod, PaymentStatusKey, PaymentType } from "@/types";
 
 /**
  * Design tokens derived from the CASIGURO Enterprises login screen.
@@ -40,6 +40,20 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; badge: string; d
   in_production: { label: "In Production", badge: "bg-sky-50 text-sky-700 border-sky-200", dot: "bg-sky-500" },
   ready: { label: "Ready for Pickup", badge: "bg-violet-50 text-violet-700 border-violet-200", dot: "bg-violet-500" },
   completed: { label: "Completed", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  cancelled: { label: "Cancelled", badge: "bg-slate-100 text-slate-500 border-slate-200", dot: "bg-slate-400" },
+};
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
+  down_payment: "Down payment",
+  payment: "Payment",
+  ewt: "EWT (2307)",
+};
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "Cash",
+  gcash: "GCash",
+  check: "Check",
+  bank_transfer: "Bank transfer",
 };
 
 export const PAYMENT_STATUS: Record<PaymentStatusKey, { label: string; badge: string }> = {

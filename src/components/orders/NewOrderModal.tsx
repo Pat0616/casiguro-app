@@ -13,14 +13,15 @@ import {
   User,
 } from "lucide-react";
 import { cn, formatCurrency, isoDate } from "@/lib/utils";
-import { CATEGORIES, NOW } from "@/lib/constants";
-import type { CatalogItem, NewOrderFormData, OrderType } from "@/types";
+import { CATEGORIES, NOW, PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import type { CatalogItem, NewOrderFormData, OrderType, PaymentMethod } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
 import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
 import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
 import OrderDocumentFields, { EMPTY_DOCUMENT_FORM, SoaSummary, toDocumentPayload } from "@/components/orders/OrderDocumentFields";
+import PaymentFields, { EMPTY_PAYMENT_FORM, toPaymentInput } from "@/components/orders/PaymentFields";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { getCatalogItems } from "@/utils/catalogAPI";
 
@@ -82,6 +83,9 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
   const [formError, setFormError] = useState<string | null>(null);
   const [items, setItems] = useState<OrderLineItem[]>([]);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  // Custom orders: optional down payment. Stock orders: paid in full now (method/ref/OR only, amount = total).
+  const [takeDownPayment, setTakeDownPayment] = useState(false);
+  const [payment, setPayment] = useState(EMPTY_PAYMENT_FORM);
 
   const customerContainerRef = useRef<HTMLDivElement>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
@@ -225,6 +229,17 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       setFormError("Due date is required.");
       return;
     }
+    const isStock = orderType === "stock";
+    const withDownPayment = !isStock && takeDownPayment;
+    if (withDownPayment) {
+      const amount = Number(payment.amount);
+      if (!amount || amount <= 0) return setFormError("Enter the down payment amount, or untick the down payment.");
+      if (amount > totalOrderAmount) return setFormError("The down payment can't be more than the order total.");
+    }
+    if ((isStock || withDownPayment) && payment.method === "check" && !payment.referenceNo.trim()) {
+      return setFormError("Enter the check no. for the check payment.");
+    }
+    const { amount: _amount, paymentType: _type, ...paymentDetails } = toPaymentInput(payment);
     const mappedItems = items.map((item) => ({
       productServiceId: item.productServiceId,
       itemName: item.itemName.trim(),
@@ -254,11 +269,15 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       dueDate: form.dueDate,
       orderType,
       items: mappedItems,
+      downPayment: withDownPayment ? toPaymentInput({ ...payment, paymentType: "down_payment" }) : undefined,
+      stockPayment: isStock ? paymentDetails : undefined,
       ...toDocumentPayload(documents),
     });
 
     setForm({ ...emptyForm, dateOrdered: isoDate(NOW), dueDate: isoDate(NOW) });
     setDocuments(EMPTY_DOCUMENT_FORM);
+    setTakeDownPayment(false);
+    setPayment(EMPTY_PAYMENT_FORM);
     setItems([]);
     setOrderType("custom");
     setStep(1);
@@ -458,6 +477,41 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                     ))}
                   </div>
                 </div>
+
+                <section className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                  {orderType === "stock" ? (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Payment</h3>
+                        <p className="mt-0.5 text-xs text-slate-500">Stock orders are paid in full now: {formatCurrency(totalOrderAmount)}.</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <Field label="Method">
+                          <select className={inputClass} value={payment.method} onChange={(e) => setPayment((p) => ({ ...p, method: e.target.value as PaymentMethod }))}>
+                            {(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[]).map((m) => <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>)}
+                          </select>
+                        </Field>
+                        <Field label={payment.method === "check" ? "Check no." : "Reference no. (optional)"}>
+                          <input maxLength={100} className={inputClass} value={payment.referenceNo} onChange={(e) => setPayment((p) => ({ ...p, referenceNo: e.target.value }))} />
+                        </Field>
+                        <Field label="OR no. (optional)">
+                          <input maxLength={50} className={inputClass} value={payment.orNo} onChange={(e) => setPayment((p) => ({ ...p, orNo: e.target.value }))} />
+                        </Field>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <label className="flex items-start gap-2">
+                        <input type="checkbox" checked={takeDownPayment} onChange={(e) => setTakeDownPayment(e.target.checked)} className="mt-1 accent-sky-600" />
+                        <span>
+                          <span className="block text-sm font-bold text-slate-800">Customer paid a down payment</span>
+                          <span className="text-xs text-slate-500">Recorded with the order. Later payments are added in Production Monitoring.</span>
+                        </span>
+                      </label>
+                      {takeDownPayment && <PaymentFields value={payment} onChange={setPayment} types={[]} maxAmount={totalOrderAmount} />}
+                    </>
+                  )}
+                </section>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Date ordered"><div className="relative"><Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="date" required value={form.dateOrdered} onChange={(event) => setForm((prev) => ({ ...prev, dateOrdered: event.target.value }))} className={cn(inputClass, "pl-9")} /></div></Field>

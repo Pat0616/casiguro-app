@@ -1,6 +1,9 @@
 export type OrderType = "custom" | "stock";
-export type OrderStatus = "pending" | "in_production" | "ready" | "completed";
+export type OrderStatus = "pending" | "in_production" | "ready" | "completed" | "cancelled";
 export type PaymentStatusKey = "unpaid" | "partial" | "paid";
+/** down_payment / payment, or EWT: tax the client withholds (BIR 2307); it settles the balance but isn't cash */
+export type PaymentType = "down_payment" | "payment" | "ewt";
+export type PaymentMethod = "cash" | "gcash" | "check" | "bank_transfer";
 export type NotificationType = "new_order" | "status_update" | "detail_update" | "quotation_update";
 export type PageKey =
   | "dashboard"
@@ -173,7 +176,44 @@ export interface Order extends OrderDocuments {
   dateOrdered: string;
   dueDate: string;
   dateCompleted?: string;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  cancelledByName?: string;
   items?: OrderItem[];
+  /** Every payment entry, voided ones included (oldest first). amountPaid/balance/paymentStatus are derived from these. */
+  payments?: Payment[];
+}
+
+export interface Payment {
+  id: string;
+  orderId: string;
+  paymentType: PaymentType;
+  method: PaymentMethod | null; // null for EWT and for payments recorded before the payment log existed
+  amount: number;
+  receivedOn: string; // YYYY-MM-DD
+  referenceNo: string | null; // GCash/bank ref, check no., or 2307 certificate no.
+  checkBank: string | null;
+  checkDate: string | null;
+  orNo: string | null;
+  note: string | null;
+  voidedAt: string | null;
+  voidedByName: string;
+  voidReason: string | null;
+  createdByName: string;
+  createdAt: string;
+}
+
+/** Body of POST /api/orders/:id/payments (and the optional down payment when creating an order) */
+export interface PaymentInput {
+  paymentType?: PaymentType;
+  method?: PaymentMethod;
+  amount: number;
+  receivedOn?: string;
+  referenceNo?: string;
+  checkBank?: string;
+  checkDate?: string;
+  orNo?: string;
+  note?: string;
 }
 
 export interface CustomerSummary {
@@ -214,14 +254,14 @@ export interface NewOrderFormData extends Partial<OrderDocuments> {
   dueDate: string;
   orderType: OrderType;
   items?: Partial<OrderItem>[];
+  /** Custom orders: optional down payment taken when the order is placed */
+  downPayment?: PaymentInput;
+  /** Stock orders are paid in full on the spot; the amount is always the order total */
+  stockPayment?: Omit<PaymentInput, "amount" | "paymentType">;
 }
 
+/** PUT /api/orders/:id: production fields only; money is changed through payments */
 export interface OrderUpdatePayload {
-  unitPrice?: number;
-  amountPaid?: number;
-  quantity?: number;
   quantityCompleted?: number;
-  status?: OrderStatus;
-  paymentStatus?: PaymentStatusKey;
-  items?: { id: string; quantityCompleted: number }[];
+  status?: Exclude<OrderStatus, "cancelled">;
 }

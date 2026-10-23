@@ -25,7 +25,7 @@ interface DeadlinePanelProps {
 }
 
 export default function DeadlinePanel({ orders, selectedDate, onClear }: DeadlinePanelProps) {
-  const active = orders.filter((o) => o.status !== "completed");
+  const active = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
   const list = selectedDate
     ? active.filter((o) => o.dueDate === selectedDate).sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
     : [...active].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1));

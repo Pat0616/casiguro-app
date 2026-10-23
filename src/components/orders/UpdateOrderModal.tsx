@@ -1,11 +1,10 @@
 // casiguro-app/src/components/orders/UpdateOrderModal.tsx
 import { useEffect, useState } from "react";
-import { CheckCircle2, Plus, Boxes, Briefcase, AlertCircle, DollarSign, FileText } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { CheckCircle2, Boxes, Briefcase, AlertCircle, FileText, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
-import type { Order, OrderItem, OrderStatus, OrderUpdatePayload, PaymentStatusKey } from "@/types";
+import type { Order, OrderItem, OrderStatus } from "@/types";
 import Modal from "@/components/ui/Modal";
-import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
 import OrderDocumentFields, {
   EMPTY_DOCUMENT_FORM,
@@ -14,41 +13,46 @@ import OrderDocumentFields, {
   toDocumentForm,
   toDocumentPayload,
 } from "@/components/orders/OrderDocumentFields";
-import { updateItemProduction, updateOrderDocuments } from "@/utils/orderAPI";
+import { cancelOrder, updateItemProduction, updateOrder, updateOrderDocuments } from "@/utils/orderAPI";
+import { useAuth } from "@/context/AuthenticationContext";
+import PaymentsPanel from "@/components/orders/PaymentsPanel";
+import ReasonModal from "@/components/orders/ReasonModal";
 
 interface UpdateOrderModalProps {
   order: Order | null;
   onClose: () => void;
-  onSave: (id: string, changes: OrderUpdatePayload) => void;
+  /** Payments are saved immediately (the modal stays open); merge the updated order */
+  onOrderChange: (order: Order) => void;
+  /** Production/documents saved or order cancelled; the modal closes */
+  onSaved: (order: Order) => void;
 }
 
-export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrderModalProps) {
+export default function UpdateOrderModal({ order, onClose, onOrderChange, onSaved }: UpdateOrderModalProps) {
+  const { user } = useAuth();
+  const [liveOrder, setLiveOrder] = useState<Order | null>(order);
   const [items, setItems] = useState<OrderItem[]>([]);
-  const [amountPaid, setAmountPaid] = useState("");
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatusKey>("unpaid");
-  const [showPaidAddition, setShowPaidAddition] = useState(false);
-  const [paidAddition, setPaidAddition] = useState("");
   const [markCompleteDespiteBalance, setMarkCompleteDespiteBalance] = useState(false);
   const [documents, setDocuments] = useState(EMPTY_DOCUMENT_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   useEffect(() => {
     if (order) {
+      setLiveOrder(order);
       setDocuments(toDocumentForm(order));
       setItems(order.items && order.items.length > 0 ? order.items : []);
-      setAmountPaid(String(order.amountPaid));
-      setPaymentStatus(order.paymentStatus);
-      setShowPaidAddition(false);
-      setPaidAddition("");
       setMarkCompleteDespiteBalance(false);
     }
-  }, [order]);
+  }, [order?.id]);
 
-  if (!order) return null;
+  if (!order || !liveOrder) return null;
 
-  const numericAmountPaid = Number(amountPaid) || 0;
-  const total = Number(order.totalPrice) || 0;
-  const balance = Math.max(0, total - numericAmountPaid);
+  // Money comes from the payment log, which may change while the modal is open
+  const balance = liveOrder.balance;
+  const handlePaymentChange = (updated: Order) => {
+    setLiveOrder(updated);
+    onOrderChange(updated);
+  };
 
   // Pure Quantity-Weighted Overall Progress Calculation:
   // (Sum of quantityCompleted / Sum of quantity) * 100
@@ -92,46 +96,30 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
     );
   };
 
-  const handleApplyPaymentAddition = () => {
-    const addition = Math.max(0, Number(paidAddition) || 0);
-    const capped = Math.min(addition, balance);
-    const newPaid = numericAmountPaid + capped;
-    setAmountPaid(String(newPaid));
-    setPaidAddition("");
-    setShowPaidAddition(false);
-    if (newPaid >= total) setPaymentStatus("paid");
-    else if (newPaid > 0) setPaymentStatus("partial");
-    else setPaymentStatus("unpaid");
-  };
-
   const handleSave = async () => {
     try {
       setSaving(true);
+      let saved = liveOrder;
       // 1. Save reference documents (PR/PO/SI/OR/DR) if they changed
-      if (documentsChanged(documents, order)) {
-        await updateOrderDocuments(order.id, toDocumentPayload(documents));
+      if (documentsChanged(documents, liveOrder)) {
+        saved = await updateOrderDocuments(order.id, toDocumentPayload(documents));
       }
 
-      // 2. If items exist, sync item production with backend
+      // 2. Sync item production (the server derives the order status); legacy orders without items update directly
       if (items.length > 0) {
-        await updateItemProduction(order.id, {
+        const result = await updateItemProduction(order.id, {
           items: items.map((it) => ({
             id: it.id,
             quantityCompleted: it.quantityCompleted,
           })),
           allowIncompletePaymentCompletion: markCompleteDespiteBalance,
         });
+        saved = result.order;
+      } else {
+        saved = await updateOrder(order.id, { quantityCompleted: totalQuantityCompleted, status: derivedOrderStatus });
       }
 
-      // 3. Call parent onSave to update local state and emit events
-      onSave(order.id, {
-        amountPaid: numericAmountPaid,
-        paymentStatus,
-        quantity: totalQuantity,
-        quantityCompleted: totalQuantityCompleted,
-        status: derivedOrderStatus,
-        items: items.map((it) => ({ id: it.id, quantityCompleted: it.quantityCompleted })),
-      });
+      onSaved(saved);
       onClose();
     } catch (err) {
       console.error("Failed to save order updates:", err);
@@ -268,87 +256,8 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
           </div>
         )}
 
-        {/* Financial Settlement Section */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-            Financial & Payment Settlement
-          </h4>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="rounded-xl bg-white p-3 border border-slate-200 shadow-sm">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Order Value</span>
-              <span className="font-mono font-extrabold text-base text-slate-900">{formatCurrency(total)}</span>
-            </div>
-
-            <div className="rounded-xl bg-white p-3 border border-slate-200 shadow-sm">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold">Amount Paid</span>
-              <div className="flex items-center justify-between">
-                <span className="font-mono font-extrabold text-base text-emerald-700">
-                  {formatCurrency(numericAmountPaid)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowPaidAddition((v) => !v)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-pink-50 hover:text-pink-600 transition"
-                  title="Add payment"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-white p-3 border border-slate-200 shadow-sm">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold">Remaining Balance</span>
-              <span className={cn("font-mono font-extrabold text-base", balance > 0 ? "text-rose-600" : "text-slate-900")}>
-                {formatCurrency(balance)}
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Payment Input */}
-          {showPaidAddition && (
-            <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-pink-200 animate-in fade-in duration-100">
-              <span className="text-xs font-bold text-slate-700">Record Payment (₱):</span>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                max={balance}
-                placeholder={`Up to ${formatCurrency(balance)}`}
-                value={paidAddition}
-                onChange={(e) => setPaidAddition(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleApplyPaymentAddition();
-                  }
-                }}
-                className="w-48 rounded-lg border border-slate-200 px-3 py-1 text-xs font-mono font-bold focus:border-pink-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleApplyPaymentAddition}
-                className="rounded-lg bg-pink-600 px-3 py-1 text-xs font-bold text-white hover:bg-pink-700"
-              >
-                Apply
-              </button>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-slate-500">Payment Status:</span>
-            <select
-              value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value as PaymentStatusKey)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
-            >
-              <option value="unpaid">Unpaid</option>
-              <option value="partial">Partially Paid</option>
-              <option value="paid">Fully Paid</option>
-            </select>
-          </div>
-        </div>
+        {/* Payments (each entry is saved immediately; status and balance follow from the log) */}
+        <PaymentsPanel order={liveOrder} onOrderChange={handlePaymentChange} />
 
         {/* Statement of Account & Reference Documents */}
         <div className="rounded-xl border border-slate-200 p-4 space-y-4">
@@ -388,15 +297,41 @@ export default function UpdateOrderModal({ order, onClose, onSave }: UpdateOrder
         )}
 
         {/* Modal Actions */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Production Updates"}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          {user?.role === "admin" ? (
+            <Button variant="ghost" onClick={() => setConfirmCancel(true)} disabled={saving} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+              <XCircle className="h-4 w-4" /> Cancel order
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
+              Close
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save Production Updates"}
+            </Button>
+          </div>
         </div>
       </div>
+
+      <ReasonModal
+        open={confirmCancel}
+        title="Cancel order"
+        subtitle={`SOA ${order.soaNo} · ${order.customerName}`}
+        body={
+          liveOrder.payments?.some((p) => !p.voidedAt)
+            ? "This order still has payments recorded. Void them first (after refunding the customer), then cancel. The SOA No stays used and the order is kept on record as cancelled."
+            : "The order is removed from production and sales totals but kept on record as cancelled. Its SOA No is not reused. This can't be undone."
+        }
+        confirmLabel="Cancel order"
+        onConfirm={async (reason) => {
+          onSaved(await cancelOrder(order.id, reason));
+          onClose();
+        }}
+        onClose={() => setConfirmCancel(false)}
+      />
     </Modal>
   );
 }
