@@ -227,7 +227,7 @@ function MainApp() {
               path="/completed"
               element={<CompletedTransactionsPage orders={orders} onOrderUpdated={handleOrderSaved} />}
             />
-            <Route path="/customers" element={<CustomerOverviewPage orders={orders} />} />
+            <Route path="/customers" element={<CustomerOverviewPage orders={orders} onOrderChange={handleOrderSaved} />} />
             <Route
               path="/notifications"
               element={

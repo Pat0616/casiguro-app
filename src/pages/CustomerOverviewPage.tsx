@@ -3,6 +3,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  DollarSign,
   FileText,
   Phone,
   Search,
@@ -21,9 +22,12 @@ import Avatar from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/Field";
 import Modal from "@/components/ui/Modal";
+import PaymentsPanel from "@/components/orders/PaymentsPanel";
 
 interface CustomerOverviewPageProps {
   orders: Order[];
+  /** Merge an order the server changed (payment recorded/voided from the customer window) */
+  onOrderChange: (order: Order) => void;
 }
 
 const FILTERS: { key: CustomerPaymentFilter; label: string }[] = [
@@ -33,10 +37,13 @@ const FILTERS: { key: CustomerPaymentFilter; label: string }[] = [
   { key: "paid", label: "Fully Paid" },
 ];
 
-export default function CustomerOverviewPage({ orders }: CustomerOverviewPageProps) {
+export default function CustomerOverviewPage({ orders, onOrderChange }: CustomerOverviewPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<CustomerPaymentFilter>("all");
   const [selectedCustomerName, setSelectedCustomerName] = useState<string | null>(null);
+  // Only the id is kept so the payments window always shows the latest version of the order
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const paymentOrder = orders.find((order) => order.id === paymentOrderId) || null;
 
   const customers = useMemo(() => {
     const map = new Map<string, CustomerSummary>();
@@ -368,12 +375,42 @@ export default function CustomerOverviewPage({ orders }: CustomerOverviewPagePro
                           <span className="italic">{order.notes}</span>
                         </div>
                       )}
+                      {(isUnpaid || (order.payments?.length ?? 0) > 0) && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentOrderId(order.id)}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                              isUnpaid
+                                ? "bg-sky-600 text-white hover:bg-sky-700"
+                                : "border border-slate-200 text-slate-600 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                            )}
+                          >
+                            <DollarSign className="h-3.5 w-3.5" />
+                            {isUnpaid ? "Record payment" : "Payments"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </Card>
           </div>
+        </Modal>
+      )}
+
+      {/* Rendered after the customer window so it opens on top of it */}
+      {paymentOrder && (
+        <Modal
+          open
+          onClose={() => setPaymentOrderId(null)}
+          title={`Payments · SOA ${paymentOrder.soaNo}`}
+          subtitle={`${paymentOrder.customerName} — ${paymentOrder.product}`}
+          wide
+        >
+          <PaymentsPanel order={paymentOrder} onOrderChange={onOrderChange} />
         </Modal>
       )}
     </div>
