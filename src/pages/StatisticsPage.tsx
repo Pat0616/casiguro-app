@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, CheckCircle2, Clock, ShoppingBag, Sparkles, TrendingUp } from "lucide-react";
+import { BarChart3, CheckCircle2, Clock, FileSpreadsheet, Loader2, ShoppingBag, Sparkles, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell,
 } from "recharts";
@@ -11,6 +11,7 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import Avatar from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/Field";
+import { downloadSalesExcel } from "@/utils/reportAPI";
 
 export default function StatisticsPage({ orders }: { orders: Order[] }) {
   const completed = orders.filter((o) => o.status === "completed" && o.dateCompleted);
@@ -21,6 +22,21 @@ export default function StatisticsPage({ orders }: { orders: Order[] }) {
   const [mode, setMode] = useState<"year" | "month">("year");
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+
+  // The export covers every order *ordered* in the period (like the business's sales sheet), not only completed ones
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      setExportError("");
+      await downloadSalesExcel({ mode, year, month });
+    } catch (err: any) {
+      setExportError(err.message || "Failed to export.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const inPeriod = completed.filter((o) => {
     const [y, m] = o.dateCompleted!.split("-");
@@ -125,6 +141,17 @@ export default function StatisticsPage({ orders }: { orders: Order[] }) {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              title="Download the Sales Monitoring sheet for every order made in this period"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-50"
+            >
+              {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+              Export to Excel
+            </button>
+            {exportError && <p className="w-full text-right text-xs font-medium text-rose-600">{exportError}</p>}
           </div>
         }
       />
