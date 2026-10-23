@@ -34,7 +34,8 @@ export function updateOrderDocuments(id: string, documents: OrderDocuments): Pro
 export function updateItemProduction(
   orderId: string,
   payload: {
-    items?: { id: string; quantityCompleted: number }[];
+    /** previousQuantityCompleted = the value the user started from; the server answers 409 if it changed meanwhile */
+    items?: { id: string; quantityCompleted: number; previousQuantityCompleted?: number }[];
     itemId?: string;
     quantityCompleted?: number;
     allowIncompletePaymentCompletion?: boolean;

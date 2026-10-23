@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn, pad, TODAY_KEY } from "@/lib/utils";
-import { GRADIENT, NOW } from "@/lib/constants";
+import { cn, pad, todayKey } from "@/lib/utils";
+import { GRADIENT } from "@/lib/constants";
 import type { Order } from "@/types";
 import Card from "@/components/ui/Card";
 
@@ -12,7 +12,11 @@ interface MiniCalendarProps {
 }
 
 export default function MiniCalendar({ orders, selectedDate, onSelectDate }: MiniCalendarProps) {
-  const [monthCursor, setMonthCursor] = useState(new Date(NOW.getFullYear(), NOW.getMonth(), 1));
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const today = todayKey();
 
   const ordersByDate = useMemo(() => {
     const map: Record<string, Order[]> = {};
@@ -59,7 +63,7 @@ export default function MiniCalendar({ orders, selectedDate, onSelectDate }: Min
           if (!d) return <div key={i} />;
           const key = `${year}-${pad(month + 1)}-${pad(d)}`;
           const hasDeadline = !!ordersByDate[key];
-          const isToday = key === TODAY_KEY;
+          const isToday = key === today;
           const isSelected = key === selectedDate;
           return (
             <button

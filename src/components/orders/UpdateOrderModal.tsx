@@ -13,7 +13,7 @@ import OrderDocumentFields, {
   toDocumentForm,
   toDocumentPayload,
 } from "@/components/orders/OrderDocumentFields";
-import { cancelOrder, updateItemProduction, updateOrder, updateOrderDocuments } from "@/utils/orderAPI";
+import { cancelOrder, getOrderById, updateItemProduction, updateOrder, updateOrderDocuments } from "@/utils/orderAPI";
 import { useAuth } from "@/context/AuthenticationContext";
 import PaymentsPanel from "@/components/orders/PaymentsPanel";
 import ReasonModal from "@/components/orders/ReasonModal";
@@ -35,15 +35,57 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   const [documents, setDocuments] = useState(EMPTY_DOCUMENT_FORM);
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Concurrency: `baseline` is the server value each item's edit started from (sent back on save so the server can
+  // refuse a stale save), `dirty` the items this user changed, `conflicts` the new server value of a dirty item
+  // that someone else saved while this modal was open.
+  const [baseline, setBaseline] = useState<Record<string, number>>({});
+  const [dirty, setDirty] = useState<Set<string>>(new Set());
+  const [conflicts, setConflicts] = useState<Record<string, number>>({});
+
+  const loadOrder = (o: Order) => {
+    const orderItems = o.items && o.items.length > 0 ? o.items : [];
+    setLiveOrder(o);
+    setItems(orderItems);
+    setBaseline(Object.fromEntries(orderItems.map((it) => [it.id, it.quantityCompleted])));
+    setDirty(new Set());
+    setConflicts({});
+  };
 
   useEffect(() => {
     if (order) {
-      setLiveOrder(order);
+      loadOrder(order);
       setDocuments(toDocumentForm(order));
-      setItems(order.items && order.items.length > 0 ? order.items : []);
       setMarkCompleteDespiteBalance(false);
+      setError(null);
     }
   }, [order?.id]);
+
+  // Live updates while the modal is open (someone else saved, or a payment was recorded): untouched items take the
+  // server values; edited items keep the user's input and are flagged if the server value moved underneath them.
+  useEffect(() => {
+    if (!order || order.id !== liveOrder?.id) return;
+    setLiveOrder(order);
+    const serverItems = order.items || [];
+    const nextConflicts: Record<string, number> = {};
+    setItems((prev) =>
+      prev.map((it) => {
+        const server = serverItems.find((s) => s.id === it.id);
+        if (!server) return it;
+        if (!dirty.has(it.id)) return server;
+        if (server.quantityCompleted !== baseline[it.id]) nextConflicts[it.id] = server.quantityCompleted;
+        return it;
+      })
+    );
+    setBaseline((prev) => {
+      const next = { ...prev };
+      serverItems.forEach((s) => {
+        if (!dirty.has(s.id)) next[s.id] = s.quantityCompleted;
+      });
+      return next;
+    });
+    setConflicts(nextConflicts);
+  }, [order]);
 
   if (!order || !liveOrder) return null;
 
@@ -76,6 +118,7 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   }
 
   const handleItemQtyChange = (itemId: string, newCompletedStr: string) => {
+    setDirty((prev) => new Set(prev).add(itemId));
     setItems((prev) =>
       prev.map((it) => {
         if (it.id !== itemId) return it;
@@ -99,19 +142,20 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   const handleSave = async () => {
     try {
       setSaving(true);
+      setError(null);
       let saved = liveOrder;
-      // 1. Save reference documents (PR/PO/SI/OR/DR) if they changed
-      if (documentsChanged(documents, liveOrder)) {
-        saved = await updateOrderDocuments(order.id, toDocumentPayload(documents));
-      }
-
-      // 2. Sync item production (the server derives the order status); legacy orders without items update directly
+      // 1. Sync item production first (the server derives the order status), so a conflict saves nothing.
+      //    Only items this user changed are sent, each with the value it started from.
+      //    Legacy orders without items update directly.
       if (items.length > 0) {
         const result = await updateItemProduction(order.id, {
-          items: items.map((it) => ({
-            id: it.id,
-            quantityCompleted: it.quantityCompleted,
-          })),
+          items: items
+            .filter((it) => dirty.has(it.id))
+            .map((it) => ({
+              id: it.id,
+              quantityCompleted: it.quantityCompleted,
+              previousQuantityCompleted: baseline[it.id],
+            })),
           allowIncompletePaymentCompletion: markCompleteDespiteBalance,
         });
         saved = result.order;
@@ -119,11 +163,26 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
         saved = await updateOrder(order.id, { quantityCompleted: totalQuantityCompleted, status: derivedOrderStatus });
       }
 
+      // 2. Save reference documents (PR/PO/SI/OR/DR) if they changed
+      if (documentsChanged(documents, liveOrder)) {
+        saved = await updateOrderDocuments(order.id, toDocumentPayload(documents));
+      }
+
       onSaved(saved);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save order updates:", err);
-      alert(`Failed to save order updates: ${err instanceof Error ? err.message : "Please try again."}`);
+      if (err?.status === 409) {
+        // Someone else saved first: show their values; the user re-applies their change
+        const latest = await getOrderById(order.id).catch(() => null);
+        if (latest) {
+          loadOrder(latest);
+          onOrderChange(latest);
+        }
+        setError(`${err.message} The latest values are shown now. Please enter your update again.`);
+      } else {
+        setError(`Failed to save order updates: ${err instanceof Error ? err.message : "Please try again."}`);
+      }
     } finally {
       setSaving(false);
     }
@@ -213,6 +272,16 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                     </div>
                   </div>
 
+                  {conflicts[item.id] != null && (
+                    <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                      <span>
+                        Someone else updated this item to <strong>{conflicts[item.id]}/{item.quantity}</strong> while you were editing.
+                        Saving now will be refused; check with them, then re-enter your count.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                     {/* Item Progress Bar */}
                     <div className="sm:col-span-6">
@@ -293,6 +362,13 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                 100% of all items completed and paid. Saving will mark this order as Completed and archive it under Completed Transactions.
               </>
             )}
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            {error}
           </div>
         )}
 

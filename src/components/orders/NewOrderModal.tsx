@@ -12,8 +12,8 @@ import {
   Trash2,
   User,
 } from "lucide-react";
-import { cn, formatCurrency, isoDate } from "@/lib/utils";
-import { CATEGORIES, NOW, PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import { cn, formatCurrency, todayKey } from "@/lib/utils";
+import { CATEGORIES, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import type { CatalogItem, NewOrderFormData, OrderType, PaymentMethod } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
@@ -63,13 +63,14 @@ const makeEmptyItem = (): OrderLineItem => ({
   subtotal: 0,
 });
 
-const emptyForm = {
+// A function so the default dates are today's date when the form is reset, not the date the page was loaded
+const emptyForm = () => ({
   customerName: "",
   contactNumber: "",
   notes: "",
-  dateOrdered: isoDate(NOW),
-  dueDate: isoDate(NOW),
-};
+  dateOrdered: todayKey(),
+  dueDate: todayKey(),
+});
 
 export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -92,6 +93,8 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
 
   useEffect(() => {
     if (!open) return;
+    // An untouched form gets today's dates each time it opens (the tab may have been open since yesterday)
+    setForm((prev) => (prev.customerName ? prev : { ...prev, dateOrdered: todayKey(), dueDate: todayKey() }));
 
     setLoadingCatalog(true);
     Promise.all([getCatalogItems({ includeInactive: false }), getCustomers()])
@@ -274,7 +277,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       ...toDocumentPayload(documents),
     });
 
-    setForm({ ...emptyForm, dateOrdered: isoDate(NOW), dueDate: isoDate(NOW) });
+    setForm(emptyForm());
     setDocuments(EMPTY_DOCUMENT_FORM);
     setTakeDownPayment(false);
     setPayment(EMPTY_PAYMENT_FORM);

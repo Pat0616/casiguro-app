@@ -1,5 +1,3 @@
-import { NOW } from "@/lib/constants";
-
 export function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
@@ -8,7 +6,8 @@ export const pad = (n: number): string => String(n).padStart(2, "0");
 
 export const isoDate = (d: Date): string => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-export const TODAY_KEY = isoDate(NOW);
+// Read the clock on every call (not once at page load) so "today" stays right when a tab is open past midnight
+export const todayKey = (): string => isoDate(new Date());
 
 export function formatCurrency(n: number): string {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -30,7 +29,8 @@ export function formatDocDate(iso?: string | null): string {
 export function daysDiff(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);
   const target = new Date(y, m - 1, d);
-  const start = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((target.getTime() - start.getTime()) / 86400000);
 }
 

@@ -64,5 +64,3 @@ export const PAYMENT_STATUS: Record<PaymentStatusKey, { label: string; badge: st
 
 export const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const PIE_COLORS = ["#db2777", "#0ea5e9", "#facc15", "#7c3aed", "#10b981", "#f97316"];
-
-export const NOW = new Date();

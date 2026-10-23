@@ -29,7 +29,9 @@ const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
 export default function ProductionMonitoringPage({ orders, onOrderChange, onOrderSaved }: ProductionMonitoringPageProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
-  const [selected, setSelected] = useState<Order | null>(null);
+  // Keep only the id so the open modal always gets the latest version of the order (socket updates, payments)
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = orders.find((o) => o.id === selectedId) || null;
 
   const activeOrders = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
 
@@ -80,7 +82,7 @@ export default function ProductionMonitoringPage({ orders, onOrderChange, onOrde
             return (
               <button
                 key={o.id}
-                onClick={() => setSelected(o)}
+                onClick={() => setSelectedId(o.id)}
                 className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -127,7 +129,7 @@ export default function ProductionMonitoringPage({ orders, onOrderChange, onOrde
 
       <UpdateOrderModal
         order={selected}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
         onOrderChange={onOrderChange}
         onSaved={onOrderSaved}
       />

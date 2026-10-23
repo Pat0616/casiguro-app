@@ -11,6 +11,7 @@ import {
 import { subscribeToAccountChanges, subscribeToNotifications, subscribeToOrders } from "@/utils/socket";
 import { getPendingAccountCount } from "@/utils/accountAPI";
 import { getMe } from "@/utils/authAPI";
+import { todayKey } from "@/lib/utils";
 
 import AppShell from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
@@ -38,6 +39,22 @@ function MainApp() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [pendingAccountsCount, setPendingAccountsCount] = useState(0);
   const [toast, setToast] = useState("");
+  // Re-render every page at local midnight so "Due today" / "Overdue" labels flip without a reload
+  const [, setDayKey] = useState(todayKey());
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleMidnight = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+      timer = setTimeout(() => {
+        setDayKey(todayKey());
+        scheduleMidnight();
+      }, nextMidnight.getTime() - now.getTime());
+    };
+    scheduleMidnight();
+    return () => clearTimeout(timer);
+  }, []);
 
   const flashToast = (msg: string) => {
     setToast(msg);

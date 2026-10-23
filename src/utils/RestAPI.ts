@@ -24,7 +24,8 @@ export async function apiRequest(
   }
 
   if (!response.ok) {
-    throw new Error(data.message || "API Error");
+    // status lets callers react to specific failures (e.g. 409 = someone else saved first)
+    throw Object.assign(new Error(data.message || "API Error"), { status: response.status });
     console.log("API Failed");
   }
 
