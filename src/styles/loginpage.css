@@ -1056,6 +1056,61 @@ body,
   text-decoration: none;
 }
 
+/* Email verification step */
+.form-notice {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  border: 1px solid #bfdbfe;
+}
+
+.verify-code-input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #dfe3ea;
+  border-radius: 12px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 12px;
+  text-align: center;
+  color: #17213f;
+  outline: none;
+}
+
+.verify-code-input:focus {
+  border-color: #087cff;
+  box-shadow: 0 0 0 3px rgba(8, 124, 255, 0.12);
+}
+
+.verify-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 13.5px;
+}
+
+.text-button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #087cff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.text-button:hover:not(:disabled) {
+  color: #ec008c;
+}
+
+.text-button:disabled {
+  color: #8a91a3;
+  cursor: default;
+}
+
 @media (max-width: 600px) {
   .form-row {
     grid-template-columns: 1fr;
