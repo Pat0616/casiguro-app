@@ -233,6 +233,7 @@ function MainApp() {
               element={
                 <NotificationsPage
                   notifications={notifications}
+                  orders={orders}
                   onMarkAllAsRead={handleMarkAllRead}
                   onMarkAsRead={handleMarkOneRead}
                 />

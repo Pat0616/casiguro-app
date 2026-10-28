@@ -1,5 +1,7 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Boxes, CalendarClock, TrendingUp, Wallet } from "lucide-react";
+import { isActiveOrder, orderLink } from "@/lib/orderLinks";
 import { cn, daysDiff, formatCurrency, formatDate, isoDate } from "@/lib/utils";
 import { GRADIENT, ORDER_STATUS } from "@/lib/constants";
 import type { Order } from "@/types";
@@ -11,6 +13,7 @@ import Badge from "@/components/ui/Badge";
 
 export default function DashboardPage({ orders }: { orders: Order[] }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const today = new Date();
 
   const stats = useMemo(() => {
@@ -89,16 +92,22 @@ export default function DashboardPage({ orders }: { orders: Order[] }) {
             {recentOrders.map((o) => {
               const cfg = ORDER_STATUS[o.status];
               return (
-                <div key={o.id} className="flex items-center justify-between gap-3 py-3">
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => navigate(orderLink(o))}
+                  title={isActiveOrder(o) ? "Open in Production Monitoring" : "Open in Completed Transactions"}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-3 text-left transition hover:bg-slate-50"
+                >
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar name={o.customerName} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-800">{o.customerName}</p>
-                      <p className="truncate text-xs text-slate-400">{o.category} · {formatDate(o.dateOrdered)}</p>
+                      <p className="truncate text-xs text-slate-400">SOA {o.soaNo} · {o.category} · {formatDate(o.dateOrdered)}</p>
                     </div>
                   </div>
                   <Badge config={cfg} label={cfg.label} />
-                </div>
+                </button>
               );
             })}
           </div>

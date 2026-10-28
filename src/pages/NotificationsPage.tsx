@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Bell, Clock, Edit3, RefreshCcw, ShoppingBag, CheckCheck, LucideIcon, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowRight, Bell, Clock, Edit3, RefreshCcw, ShoppingBag, CheckCheck, LucideIcon, FileText } from "lucide-react";
 import { cn, relativeTime } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
-import type { AppNotification, NotificationType } from "@/types";
+import { orderLink } from "@/lib/orderLinks";
+import type { AppNotification, NotificationType, Order } from "@/types";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
 import EmptyState from "@/components/ui/EmptyState";
@@ -25,16 +27,22 @@ const FILTERS: { key: NotificationType | "all"; label: string }[] = [
 
 interface NotificationsPageProps {
   notifications: AppNotification[];
+  /** Used to open the order a notification is about (matched by SOA No) */
+  orders: Order[];
   onMarkAllAsRead?: () => void;
   onMarkAsRead?: (id: string) => void;
 }
 
 export default function NotificationsPage({
   notifications,
+  orders,
   onMarkAllAsRead,
   onMarkAsRead,
 }: NotificationsPageProps) {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<NotificationType | "all">("all");
+  // Notifications store the SOA No; quotation notifications and removed orders have no match
+  const orderFor = (n: AppNotification) => orders.find((o) => o.soaNo === n.orderRef) || null;
 
   const list = notifications
     .filter((n) => filter === "all" || n.type === filter)
@@ -85,14 +93,31 @@ export default function NotificationsPage({
             {list.map((n) => {
               const meta = NOTIF_ICON[n.type];
               const isUnread = !n.readAt;
+              const order = orderFor(n);
+              const open = () => {
+                if (isUnread) onMarkAsRead?.(n.id);
+                if (order) navigate(orderLink(order));
+              };
 
               return (
                 <div
                   key={n.id}
-                  onClick={() => isUnread && onMarkAsRead && onMarkAsRead(n.id)}
+                  onClick={open}
+                  {...(order && {
+                    role: "link",
+                    tabIndex: 0,
+                    title: "Open this order",
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        open();
+                      }
+                    },
+                  })}
                   className={cn(
-                    "flex items-start gap-3.5 p-4 transition",
-                    isUnread ? "bg-pink-50/20 hover:bg-pink-50/40 cursor-pointer" : "hover:bg-slate-50"
+                    "group flex items-start gap-3.5 p-4 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400",
+                    isUnread ? "bg-pink-50/20 hover:bg-pink-50/40" : "hover:bg-slate-50",
+                    (isUnread || order) && "cursor-pointer"
                   )}
                 >
                   <div className={cn("relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", meta.tint)}>
@@ -115,6 +140,11 @@ export default function NotificationsPage({
                     </p>
                     <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                       <Clock className="h-3 w-3" /> {relativeTime(n.timestamp)}
+                      {order && (
+                        <span className="ml-2 inline-flex items-center gap-0.5 font-semibold transition group-hover:text-sky-600">
+                          Open order <ArrowRight className="h-3 w-3" />
+                        </span>
+                      )}
                     </p>
                   </div>
                   {isUnread && (

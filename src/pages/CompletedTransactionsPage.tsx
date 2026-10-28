@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, Search } from "lucide-react";
 import { cn, formatCurrency, formatDate, formatDocDate } from "@/lib/utils";
 import { PAYMENT_STATUS } from "@/lib/constants";
@@ -18,7 +19,16 @@ interface CompletedTransactionsPageProps {
 }
 
 export default function CompletedTransactionsPage({ orders, onOrderUpdated }: CompletedTransactionsPageProps) {
-  const [selected, setSelected] = useState<Order | null>(null);
+  // The open order lives in the URL (?order=<id>) so other pages can link to it; looked up live from `orders`
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get("order");
+  const selected = orders.find((o) => o.id === selectedId) || null;
+  const openOrder = (id: string) => setSearchParams({ order: id });
+  const closeOrder = () => setSearchParams({}, { replace: true });
+  // Drop a link to an order that doesn't exist (once orders have loaded)
+  useEffect(() => {
+    if (selectedId && orders.length > 0 && !selected) closeOrder();
+  }, [selectedId, selected, orders.length]);
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
   const [year, setYear] = useState("all");
@@ -135,7 +145,7 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
                 {filtered.map((o) => {
                   const pcfg = PAYMENT_STATUS[o.paymentStatus];
                   return (
-                    <tr key={o.id} onClick={() => setSelected(o)} title="Open documents and payments" className="cursor-pointer transition hover:bg-slate-50">
+                    <tr key={o.id} onClick={() => openOrder(o.id)} title="Open documents and payments" className="cursor-pointer transition hover:bg-slate-50">
                       <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs">
                         <span className="block font-bold text-slate-700">{o.soaNo}</span>
                         <span className="text-slate-400">{formatDocDate(o.soaDate)}</span>
@@ -163,7 +173,7 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
         )}
       </Card>
 
-      <OrderDocumentsModal order={selected} onClose={() => setSelected(null)} onSaved={onOrderUpdated} />
+      <OrderDocumentsModal order={selected} onClose={closeOrder} onSaved={onOrderUpdated} />
     </div>
   );
 }

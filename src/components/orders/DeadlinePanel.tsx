@@ -9,7 +9,10 @@ import {
   AlertTriangle,
   Flame,
   X,
+  ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { orderLink } from "@/lib/orderLinks";
 import { cn, dueLabel, formatCurrency, formatDate } from "@/lib/utils";
 import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import type { Order } from "@/types";
@@ -25,6 +28,7 @@ interface DeadlinePanelProps {
 }
 
 export default function DeadlinePanel({ orders, selectedDate, onClear }: DeadlinePanelProps) {
+  const navigate = useNavigate();
   const active = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
   const list = selectedDate
     ? active.filter((o) => o.dueDate === selectedDate).sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
@@ -123,10 +127,21 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
             const isSoon = due.urgency === "soon";
 
             return (
+              // Opens the order's Production Tracking window in Production Monitoring
               <div
                 key={o.id}
+                role="link"
+                tabIndex={0}
+                title="Open in Production Monitoring"
+                onClick={() => navigate(orderLink(o))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate(orderLink(o));
+                  }
+                }}
                 className={cn(
-                  "overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md",
+                  "group cursor-pointer overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
                   isOverdue && "border-l-[6px] border-l-rose-600 border-rose-200 bg-rose-50/25 ring-1 ring-rose-200/50",
                   isToday && "border-l-[6px] border-l-amber-500 border-amber-200 bg-amber-50/25 ring-1 ring-amber-200/50",
                   isTomorrow && "border-l-[6px] border-l-orange-400 border-orange-200 bg-orange-50/15",
@@ -335,6 +350,12 @@ export default function DeadlinePanel({ orders, selectedDate, onClear }: Deadlin
                       <span className="italic">{o.notes}</span>
                     </div>
                   )}
+
+                  <div className="mt-3 flex justify-end">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 transition group-hover:text-sky-600">
+                      Update production <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
                 </div>
               </div>
             );

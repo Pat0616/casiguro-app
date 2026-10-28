@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Factory, Search } from "lucide-react";
 import { cn, dueLabel } from "@/lib/utils";
 import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
@@ -10,6 +11,7 @@ import Avatar from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/Field";
 import UpdateOrderModal from "@/components/orders/UpdateOrderModal";
+import { isActiveOrder, orderLink } from "@/lib/orderLinks";
 
 interface ProductionMonitoringPageProps {
   orders: Order[];
@@ -29,11 +31,27 @@ const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
 export default function ProductionMonitoringPage({ orders, onOrderChange, onOrderSaved }: ProductionMonitoringPageProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
-  // Keep only the id so the open modal always gets the latest version of the order (socket updates, payments)
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The open order lives in the URL (?order=<id>) so other pages can link to it and Back closes it.
+  // Only the id is kept, so the modal always gets the latest version of the order (socket updates, payments).
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get("order");
   const selected = orders.find((o) => o.id === selectedId) || null;
+  const openOrder = (id: string) => setSearchParams({ order: id });
+  const closeOrder = () => setSearchParams({}, { replace: true });
 
-  const activeOrders = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
+  // A link to an order that is no longer here: completed/cancelled ones open on their own page, unknown ids are dropped.
+  // Checked once per link, after orders have loaded (a link can be opened before they arrive), so an order that is
+  // completed while its window is open stays open here.
+  const checkedId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedId || orders.length === 0 || checkedId.current === selectedId) return;
+    checkedId.current = selectedId;
+    if (!selected) closeOrder();
+    else if (!isActiveOrder(selected)) navigate(orderLink(selected), { replace: true });
+  }, [selectedId, selected, orders.length]);
+
+  const activeOrders = orders.filter(isActiveOrder);
 
   const filtered = activeOrders.filter((o) => {
     const matchesFilter = filter === "all" || o.status === filter;
@@ -82,7 +100,7 @@ export default function ProductionMonitoringPage({ orders, onOrderChange, onOrde
             return (
               <button
                 key={o.id}
-                onClick={() => setSelectedId(o.id)}
+                onClick={() => openOrder(o.id)}
                 className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -129,7 +147,7 @@ export default function ProductionMonitoringPage({ orders, onOrderChange, onOrde
 
       <UpdateOrderModal
         order={selected}
-        onClose={() => setSelectedId(null)}
+        onClose={closeOrder}
         onOrderChange={onOrderChange}
         onSaved={onOrderSaved}
       />
