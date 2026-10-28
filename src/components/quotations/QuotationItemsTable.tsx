@@ -3,6 +3,7 @@ import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import type { ShoppingCartLine } from "@/components/catalog/ShoppingCartPanel";
 import { CATEGORIES } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
+import PriceInput from "@/components/ui/PriceInput";
 
 type EditableField = "itemName" | "category" | "quantity" | "finalUnitPrice" | "priceAdjustmentReason";
 
@@ -105,12 +106,9 @@ export default function QuotationItemsTable({ items, totalQuantity, totalAmount,
                         />
                       </td>
                       <td className="px-3 py-1.5">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
+                        <PriceInput
                           value={item.finalUnitPrice}
-                          onChange={(event) => onChange(item.tempId, "finalUnitPrice", event.target.value)}
+                          onChange={(price) => onChange(item.tempId, "finalUnitPrice", String(price))}
                           aria-label={`Item ${index + 1} unit price`}
                           className={cn(cellInput, "text-right font-mono", adjusted && "border-amber-300 bg-amber-50")}
                         />

@@ -86,15 +86,18 @@ export default function PaymentFields({ value, onChange, types = ["payment", "do
         </Field>
       )}
       <Field label={isEwt ? "Amount withheld (₱)" : "Amount (₱)"}>
+        {/* Text input so there are no spinner arrows; only digits and up to 2 decimals are accepted */}
         <input
-          type="number"
-          min="0.01"
-          step="0.01"
-          max={maxAmount}
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
           placeholder={maxAmount != null ? `Up to ${maxAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : "0.00"}
           className={inputClass}
           value={value.amount}
-          onChange={(e) => set({ amount: e.target.value })}
+          onChange={(e) => {
+            const amount = e.target.value.trim();
+            if (/^\d*\.?\d{0,2}$/.test(amount)) set({ amount });
+          }}
         />
       </Field>
       <Field label="Date received (blank = today)">

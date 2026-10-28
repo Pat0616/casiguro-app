@@ -18,6 +18,7 @@ import type { CatalogItem, NewOrderFormData, OrderType, PaymentMethod } from "@/
 import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
+import PriceInput from "@/components/ui/PriceInput";
 import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
 import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
 import OrderDocumentFields, { EMPTY_DOCUMENT_FORM, SoaSummary, toDocumentPayload } from "@/components/orders/OrderDocumentFields";
@@ -395,7 +396,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                           </div>
                           <div className="grid gap-3 sm:grid-cols-3">
                             <label className="text-xs font-semibold text-slate-600">Quantity<input type="number" min="1" value={item.quantity} onChange={(event) => handleChangeItem(item.tempId, "quantity", event.target.value)} className={cn(inputClass, "mt-1")} /></label>
-                            <label className="text-xs font-semibold text-slate-600">Final unit price<input type="number" min="0" step="0.01" value={item.finalUnitPrice} onChange={(event) => handleChangeItem(item.tempId, "finalUnitPrice", event.target.value)} className={cn(inputClass, "mt-1", adjusted && "border-amber-400 bg-amber-50")} /></label>
+                            <label className="text-xs font-semibold text-slate-600">Final unit price<PriceInput value={item.finalUnitPrice} onChange={(price) => handleChangeItem(item.tempId, "finalUnitPrice", String(price))} className={cn(inputClass, "mt-1", adjusted && "border-amber-400 bg-amber-50")} /></label>
                             <div className="text-xs font-semibold text-slate-600">Subtotal<p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-900">{formatCurrency(item.subtotal)}</p></div>
                           </div>
                           {adjusted && <label className="block text-xs font-semibold text-amber-800">Price adjustment reason<input value={item.priceAdjustmentReason} onChange={(event) => handleChangeItem(item.tempId, "priceAdjustmentReason", event.target.value)} placeholder="Required when price differs from catalog price" className="mt-1 w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" /></label>}

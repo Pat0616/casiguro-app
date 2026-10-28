@@ -3,6 +3,7 @@ import { Briefcase, ChevronLeft, ChevronRight, Image as ImageIcon, Plus, Trash2,
 import type { CatalogItem } from "@/types";
 import { CATEGORIES } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
+import PriceInput from "@/components/ui/PriceInput";
 
 export interface ShoppingCartLine {
   tempId: string;
@@ -160,12 +161,9 @@ export default function ShoppingCartPanel({
                   </label>
                   <label className="text-[11px] font-semibold text-slate-600">
                     Unit price
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
+                    <PriceInput
                       value={item.finalUnitPrice}
-                      onChange={(event) => onChange(item.tempId, "finalUnitPrice", event.target.value)}
+                      onChange={(price) => onChange(item.tempId, "finalUnitPrice", String(price))}
                       className={`mt-1 w-full rounded-lg border px-2 py-1.5 text-sm ${adjusted ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}
                     />
                   </label>
