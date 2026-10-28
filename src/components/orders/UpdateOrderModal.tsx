@@ -260,7 +260,7 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
               <p className="mt-1 text-sm font-semibold text-slate-500">{piecesLeft > 0 ? `${piecesLeft} pcs left` : "All pcs done"}</p>
             </div>
           </div>
-          <ProgressBar before={totalSavedCompleted} after={totalQuantityCompleted} total={totalQuantity} className="mt-4 h-4" gradient />
+          <ProgressBar before={totalSavedCompleted} after={totalQuantityCompleted} total={totalQuantity} className="mt-4 h-4" />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
             <Badge config={ORDER_STATUS[derivedOrderStatus]} label={ORDER_STATUS[derivedOrderStatus].label} />
             <span className="flex items-center gap-1.5 text-slate-600">
