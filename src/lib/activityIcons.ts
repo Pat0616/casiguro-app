@@ -98,6 +98,7 @@ export const ACTIVITY: Record<string, ActivityStyle> = {
   "account.reactivate": style(UserCheck, TINT.green, "Account reactivated"),
   "account.reject": style(UserX, TINT.rose, "Registration rejected"),
   "account.deactivate": style(UserX, TINT.rose, "Account deactivated"),
+  "account.deactivate_failed": style(ShieldAlert, TINT.rose, "Deactivation failed"),
   "account.promote": style(ShieldCheck, TINT.violet, "Promoted to admin"),
   "account.promote_failed": style(ShieldAlert, TINT.rose, "Promotion failed"),
   "account.create_admin": style(ShieldPlus, TINT.violet, "Admin created"),

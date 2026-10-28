@@ -4,12 +4,14 @@ import type { Account } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
-import { approveAccount, deactivateAccount, reactivateAccount, rejectAccount } from "@/utils/accountAPI";
+import { approveAccount, reactivateAccount, rejectAccount } from "@/utils/accountAPI";
+import DeactivateAccountModal from "./DeactivateAccountModal";
 
 export type AccountAction = "approve" | "reject" | "deactivate" | "reactivate";
 
+// Deactivate has its own stricter window (password, and the email for admins)
 const ACTIONS: Record<
-  AccountAction,
+  Exclude<AccountAction, "deactivate">,
   {
     title: string;
     confirmLabel: string;
@@ -34,15 +36,6 @@ const ACTIONS: Record<
     withReason: true,
     body: (a) => `${a.fullName} (${a.email}) won't be able to sign in. The registration is kept on record as rejected.`,
     run: (a, reason) => rejectAccount(a.id, reason),
-  },
-  deactivate: {
-    title: "Deactivate account",
-    confirmLabel: "Deactivate account",
-    variant: "danger",
-    withReason: true,
-    body: (a) =>
-      `${a.fullName} will be signed out immediately and won't be able to sign in. Their records and audit log are kept, and you can reactivate the account later.`,
-    run: (a, reason) => deactivateAccount(a.id, reason),
   },
   reactivate: {
     title: "Reactivate account",
@@ -72,6 +65,7 @@ export default function AccountActionModal({ account, action, onClose, onDone }:
   }, [account?.id, action]);
 
   if (!account || !action) return null;
+  if (action === "deactivate") return <DeactivateAccountModal account={account} onClose={onClose} onDone={onDone} />;
   const config = ACTIONS[action];
 
   const handleConfirm = async () => {

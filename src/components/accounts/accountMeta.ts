@@ -28,6 +28,7 @@ export const FLAGGED_ACTIONS: Record<string, string> = {
   "auth.login_failed": "border-l-rose-400 bg-rose-50/40",
   "auth.login_blocked": "border-l-amber-400 bg-amber-50/40",
   "account.promote_failed": "border-l-rose-400 bg-rose-50/40",
+  "account.deactivate_failed": "border-l-rose-400 bg-rose-50/40",
 };
 
 // Server timestamps arrive as "YYYY-MM-DD HH:MM:SS" in local time

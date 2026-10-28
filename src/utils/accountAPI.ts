@@ -25,8 +25,12 @@ export function rejectAccount(id: string, reason?: string): Promise<Account> {
   return apiRequest(`/api/accounts/${id}/reject`, { method: "PATCH", body: JSON.stringify({ reason }) });
 }
 
-export function deactivateAccount(id: string, reason?: string): Promise<Account> {
-  return apiRequest(`/api/accounts/${id}/deactivate`, { method: "PATCH", body: JSON.stringify({ reason }) });
+/** Needs a reason and your own password; for an admin target also their email typed exactly */
+export function deactivateAccount(
+  id: string,
+  confirmation: { reason: string; password: string; confirmEmail?: string }
+): Promise<Account> {
+  return apiRequest(`/api/accounts/${id}/deactivate`, { method: "PATCH", body: JSON.stringify(confirmation) });
 }
 
 export function reactivateAccount(id: string): Promise<Account> {
