@@ -1,11 +1,12 @@
 // casiguro-app/src/components/orders/UpdateOrderModal.tsx
-import { useEffect, useState } from "react";
-import { CheckCircle2, Boxes, Briefcase, AlertCircle, FileText, XCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { GRADIENT } from "@/lib/constants";
+import { useEffect, useState, type ReactNode } from "react";
+import { CheckCircle2, Boxes, Briefcase, AlertCircle, ArrowRight, CalendarClock, ChevronDown, FileText, Wallet, XCircle, type LucideIcon } from "lucide-react";
+import { cn, daysDiff, formatCurrency, formatDate } from "@/lib/utils";
+import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import type { Order, OrderItem, OrderStatus } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 import OrderDocumentFields, {
   EMPTY_DOCUMENT_FORM,
   SoaSummary,
@@ -45,6 +46,8 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   const [conflicts, setConflicts] = useState<Record<string, number>>({});
   // Pcs finished since the last update, as typed per item; the item's total is baseline + this
   const [added, setAdded] = useState<Record<string, string>>({});
+  // Items that were already fully done show as a compact row; these ids were expanded for a correction
+  const [openDone, setOpenDone] = useState<Set<string>>(new Set());
 
   const loadOrder = (o: Order) => {
     const orderItems = o.items && o.items.length > 0 ? o.items : [];
@@ -54,6 +57,7 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
     setDirty(new Set());
     setConflicts({});
     setAdded({});
+    setOpenDone(new Set());
   };
 
   useEffect(() => {
@@ -120,6 +124,24 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   } else if (overallProgress > 0) {
     derivedOrderStatus = "in_production";
   }
+
+  // Saved values (what the order had when the edit started), for the "before → after" preview
+  const savedOf = (it: OrderItem) => baseline[it.id] ?? it.quantityCompleted;
+  const totalSavedCompleted = items.length > 0 ? items.reduce((sum, it) => sum + (Number(savedOf(it)) || 0), 0) : totalQuantityCompleted;
+  const piecesLeft = Math.max(0, totalQuantity - totalQuantityCompleted);
+  const changedItemCount = items.filter((it) => it.quantityCompleted !== savedOf(it)).length;
+  const docsChanged = documentsChanged(documents, liveOrder);
+  const due = dueText(order.dueDate);
+  const activePayments = (liveOrder.payments || []).filter((p) => !p.voidedAt);
+  const docSummary = [
+    ["PR", documents.prNo],
+    ["PO", documents.poNo],
+    ["J.O.", documents.joNo],
+    ["SI/OR", documents.siOrNo],
+    ["DR", documents.drNo],
+  ]
+    .filter(([, value]) => value.trim())
+    .map(([label, value]) => `${label} ${value.trim()}`);
 
   const handleItemQtyChange = (itemId: string, newCompletedStr: string) => {
     setDirty((prev) => new Set(prev).add(itemId));
@@ -217,23 +239,35 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
       wide
     >
       <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-1">
-        {/* Overall Quantity-Weighted Progress Bar */}
-        <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
-          <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-700">
-            <span>Overall Production Progress (Pure Quantity-Weighted)</span>
-            <span className="font-mono text-pink-700 font-extrabold text-sm">
-              {totalQuantityCompleted} / {totalQuantity} pcs ({overallProgress}%)
+        {/* Overall progress: pcs done across all items (each pc counts the same) */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Overall progress</p>
+              <p className="mt-1 flex flex-wrap items-baseline gap-x-2 font-display font-extrabold text-slate-900">
+                {totalSavedCompleted !== totalQuantityCompleted && (
+                  <>
+                    <span className="text-3xl text-slate-400">{totalSavedCompleted}</span>
+                    <ArrowRight className="h-6 w-6 self-center text-sky-500" />
+                  </>
+                )}
+                <span className={cn("text-5xl", totalSavedCompleted !== totalQuantityCompleted && "text-sky-600")}>{totalQuantityCompleted}</span>
+                <span className="text-2xl text-slate-400">/ {totalQuantity} pcs</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-display text-4xl font-extrabold text-pink-600">{overallProgress}%</p>
+              <p className="mt-1 text-sm font-semibold text-slate-500">{piecesLeft > 0 ? `${piecesLeft} pcs left` : "All pcs done"}</p>
+            </div>
+          </div>
+          <ProgressBar before={totalSavedCompleted} after={totalQuantityCompleted} total={totalQuantity} className="mt-4 h-4" gradient />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <Badge config={ORDER_STATUS[derivedOrderStatus]} label={ORDER_STATUS[derivedOrderStatus].label} />
+            <span className="flex items-center gap-1.5 text-slate-600">
+              <CalendarClock className="h-4 w-4 text-slate-400" />
+              Due <strong className="text-slate-800">{formatDate(order.dueDate)}</strong>
+              <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", due.tone)}>{due.text}</span>
             </span>
-          </div>
-          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-            <div
-              className={cn(GRADIENT, "h-full rounded-full transition-all duration-300")}
-              style={{ width: `${overallProgress}%` }}
-            />
-          </div>
-          <div className="mt-2 flex justify-between items-center text-[11px] text-slate-500">
-            <span>Overall Order Status: <strong className="capitalize text-slate-800">{derivedOrderStatus.replace("_", " ")}</strong></span>
-            <span>Due Date: <strong className="text-slate-800">{order.dueDate}</strong></span>
           </div>
         </div>
 
@@ -242,15 +276,43 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Itemized Production Workorders ({items.length})
+                Items ({items.length})
               </h4>
               <span className="text-[11px] text-slate-400">
-                Track completion progress individually per deliverable
+                Enter the pcs finished since the last update
               </span>
             </div>
 
             <div className="space-y-3">
-              {items.map((item, idx) => (
+              {items.map((item, idx) => {
+                const saved = savedOf(item);
+                const quantity = Number(item.quantity) || 0;
+                const itemLeft = Math.max(0, quantity - item.quantityCompleted);
+                // Already fully done when the window opened: a compact row, expandable for a correction
+                if (saved >= quantity && quantity > 0 && !dirty.has(item.id) && !openDone.has(item.id) && conflicts[item.id] == null) {
+                  return (
+                    <div key={item.id || idx} className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                        <span className="truncate text-sm font-bold text-slate-900">{item.itemName}</span>
+                        {item.selectedVariant && <span className="shrink-0 text-xs font-semibold text-sky-700">{item.selectedVariant}</span>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="font-mono text-xl font-extrabold text-emerald-700">
+                          {quantity} / {quantity} <span className="text-sm font-bold">done</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setOpenDone((prev) => new Set(prev).add(item.id))}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white hover:text-slate-800"
+                        >
+                          Correct <ChevronDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
                 <div
                   key={item.id || idx}
                   className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition"
@@ -276,7 +338,17 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+                      <p className="flex items-baseline gap-1.5 font-mono font-extrabold text-slate-900">
+                        {saved !== item.quantityCompleted && (
+                          <>
+                            <span className="text-lg text-slate-400">{saved}</span>
+                            <ArrowRight className="h-4 w-4 self-center text-sky-500" />
+                          </>
+                        )}
+                        <span className={cn("text-3xl", saved !== item.quantityCompleted && "text-sky-600")}>{item.quantityCompleted}</span>
+                        <span className="text-lg text-slate-400">/ {quantity}</span>
+                      </p>
                       <span
                         className={cn(
                           "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
@@ -305,18 +377,11 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                   <div className="mt-3 space-y-3">
                     {/* Item Progress Bar */}
                     <div>
-                      <div className="flex justify-between text-xs text-slate-600 mb-1">
-                        <span>Progress</span>
-                        <span className="font-mono font-bold">
-                          {item.quantityCompleted} / {item.quantity} ({item.productionProgress}%)
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-pink-500 to-sky-500 transition-all duration-200"
-                          style={{ width: `${item.productionProgress}%` }}
-                        />
-                      </div>
+                      <ProgressBar before={saved} after={item.quantityCompleted} total={quantity} className="h-2.5" />
+                      <p className="mt-1 flex justify-between text-xs font-semibold text-slate-500">
+                        <span>{item.productionProgress}% done</span>
+                        <span>{itemLeft > 0 ? `${itemLeft} pcs left` : "All pcs done"}</span>
+                      </p>
                     </div>
 
                     <ProductionQtyInput
@@ -328,23 +393,35 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                     />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Payments (each entry is saved immediately; status and balance follow from the log) */}
-        <PaymentsPanel order={liveOrder} onOrderChange={handlePaymentChange} />
+        <CollapsibleSection
+          icon={Wallet}
+          title="Payments"
+          defaultOpen
+          summary={`${PAYMENT_STATUS[liveOrder.paymentStatus].label} · Balance ${formatCurrency(balance)} · ${activePayments.length} ${
+            activePayments.length === 1 ? "payment" : "payments"
+          }`}
+        >
+          <PaymentsPanel order={liveOrder} onOrderChange={handlePaymentChange} />
+        </CollapsibleSection>
 
-        {/* Statement of Account & Reference Documents */}
-        <div className="rounded-xl border border-slate-200 p-4 space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <FileText className="h-4 w-4 text-sky-600" />
-            Statement of Account & Reference Documents
-          </h4>
-          <SoaSummary soaNo={order.soaNo} soaDate={order.soaDate} />
-          <OrderDocumentFields value={documents} onChange={setDocuments} />
-        </div>
+        {/* Statement of Account & Reference Documents (kept mounted while closed, so typed changes aren't lost) */}
+        <CollapsibleSection
+          icon={FileText}
+          title="SOA & reference documents"
+          summary={`SOA ${order.soaNo}${docSummary.length > 0 ? ` · ${docSummary.join(" · ")}` : " · no reference numbers yet"}${docsChanged ? " · unsaved changes" : ""}`}
+        >
+          <div className="space-y-4">
+            <SoaSummary soaNo={order.soaNo} soaDate={order.soaDate} />
+            <OrderDocumentFields value={documents} onChange={setDocuments} />
+          </div>
+        </CollapsibleSection>
 
         {overallProgress >= 100 && (
           <div className={cn(
@@ -380,21 +457,31 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
           </div>
         )}
 
-        {/* Modal Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-          {user?.role === "admin" ? (
-            <Button variant="ghost" onClick={() => setConfirmCancel(true)} disabled={saving} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700">
-              <XCircle className="h-4 w-4" /> Cancel order
-            </Button>
-          ) : (
-            <span />
-          )}
+        {/* Modal Actions: pinned to the bottom of the scroll area so Save is always in reach */}
+        <div className="sticky bottom-0 z-10 -mb-px flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white pt-4 pb-1 shadow-[0_-8px_12px_-12px_rgba(15,23,42,0.25)]">
+          <div className="flex items-center gap-3">
+            {user?.role === "admin" && (
+              <Button variant="ghost" onClick={() => setConfirmCancel(true)} disabled={saving} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+                <XCircle className="h-4 w-4" /> Cancel order
+              </Button>
+            )}
+            <span className={cn("text-xs font-semibold", changedItemCount > 0 || docsChanged ? "text-sky-700" : "text-slate-400")}>
+              {changedItemCount > 0 || docsChanged
+                ? [
+                    changedItemCount > 0 && `${changedItemCount} ${changedItemCount === 1 ? "item" : "items"} changed`,
+                    docsChanged && "documents edited",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : "No unsaved changes"}
+            </span>
+          </div>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={onClose} disabled={saving}>
               Close
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save Production Updates"}
+              {saving ? "Saving..." : "Save changes"}
             </Button>
           </div>
         </div>
@@ -417,5 +504,72 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
         onClose={() => setConfirmCancel(false)}
       />
     </Modal>
+  );
+}
+
+// "Overdue by 2 days" / "Due today" / "in 5 days", with a matching colour
+function dueText(dueDate: string): { text: string; tone: string } {
+  const diff = daysDiff(dueDate);
+  if (diff < 0) return { text: `Overdue by ${-diff} ${diff === -1 ? "day" : "days"}`, tone: "bg-rose-600 text-white" };
+  if (diff === 0) return { text: "Due today", tone: "bg-amber-500 text-white" };
+  if (diff === 1) return { text: "Due tomorrow", tone: "bg-orange-100 text-orange-800" };
+  return { text: `in ${diff} days`, tone: diff <= 3 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600" };
+}
+
+// Saved progress as the solid bar; pcs being added (light blue) or removed (light red) show as a separate segment
+function ProgressBar({ before, after, total, className, gradient = false }: { before: number; after: number; total: number; className?: string; gradient?: boolean }) {
+  const pct = (n: number) => (total > 0 ? Math.min(100, Math.max(0, (n / total) * 100)) : 0);
+  const solid = pct(Math.min(before, after));
+  const change = pct(Math.abs(after - before));
+  return (
+    <div className={cn("flex w-full overflow-hidden rounded-full bg-slate-200", className)}>
+      <div
+        className={cn("h-full transition-all duration-300", gradient ? GRADIENT : "bg-gradient-to-r from-pink-500 to-sky-500")}
+        style={{ width: `${solid}%` }}
+      />
+      {change > 0 && (
+        <div
+          className={cn("h-full transition-all duration-300", after > before ? "bg-sky-300" : "bg-rose-300")}
+          style={{ width: `${change}%` }}
+          title={after > before ? `+${after - before} pcs not saved yet` : `${after - before} pcs not saved yet`}
+        />
+      )}
+    </div>
+  );
+}
+
+// Closed by default (unless defaultOpen) with a one-line summary. Children stay mounted while closed so typed changes
+// aren't lost.
+function CollapsibleSection({
+  icon: Icon,
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  summary: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-slate-200">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition hover:bg-slate-50"
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          <Icon className="h-4 w-4 shrink-0 text-sky-600" />
+          <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-700">{title}</span>
+          <span className="truncate text-xs text-slate-500">{summary}</span>
+        </span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-slate-400 transition", open && "rotate-180")} />
+      </button>
+      <div className={cn("border-t border-slate-100 p-3", !open && "hidden")}>{children}</div>
+    </div>
   );
 }
