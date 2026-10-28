@@ -4,6 +4,7 @@ import { ArrowRight, Bell, Clock, Edit3, RefreshCcw, ShoppingBag, CheckCheck, Lu
 import { cn, relativeTime } from "@/lib/utils";
 import { GRADIENT } from "@/lib/constants";
 import { orderLink } from "@/lib/orderLinks";
+import { ACTIVITY } from "@/lib/activityIcons";
 import type { AppNotification, NotificationType, Order } from "@/types";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -91,7 +92,8 @@ export default function NotificationsPage({
         ) : (
           <div className="divide-y divide-slate-100">
             {list.map((n) => {
-              const meta = NOTIF_ICON[n.type];
+              // Specific icon for the exact event; older notifications without one use their type's icon
+              const meta = (n.event && ACTIVITY[n.event]) || NOTIF_ICON[n.type];
               const isUnread = !n.readAt;
               const order = orderFor(n);
               const open = () => {

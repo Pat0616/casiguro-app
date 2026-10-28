@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { AlertCircle, ChevronDown, Download, History, Loader2 } from "lucide-react";
 import type { Account, AuditCategory, AuditLogEntry } from "@/types";
 import { cn } from "@/lib/utils";
+import { ACTIVITY, auditEvent } from "@/lib/activityIcons";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import { downloadAuditLogCsv, getAuditLogs, type AuditLogFilters } from "@/utils/accountAPI";
@@ -170,7 +171,7 @@ export default function AccountAuditLog({ account, category, onCategoryChange }:
             <thead>
               <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 <th className="w-24 px-5 py-2.5">Time</th>
-                <th className="w-36 px-3 py-2.5">Category</th>
+                <th className="w-44 px-3 py-2.5">Action</th>
                 <th className="px-3 py-2.5">Activity</th>
                 <th className="w-40 px-3 py-2.5">Record</th>
                 <th className="w-32 px-3 py-2.5">IP address</th>
@@ -183,7 +184,8 @@ export default function AccountAuditLog({ account, category, onCategoryChange }:
                 const day = date ? formatDay(date) : "";
                 const showDay = day !== lastDay;
                 lastDay = day;
-                const meta = AUDIT_CATEGORY[entry.category] || AUDIT_CATEGORY.account;
+                const category = AUDIT_CATEGORY[entry.category] || AUDIT_CATEGORY.account;
+                const meta = ACTIVITY[auditEvent(entry)] || category;
                 const Icon = meta.icon;
                 const changeEntries = entry.changes ? Object.entries(entry.changes) : [];
                 const isOpen = expanded.has(entry.id);
@@ -200,7 +202,7 @@ export default function AccountAuditLog({ account, category, onCategoryChange }:
                     <tr className={cn("align-top border-b border-slate-100", flag && "border-l-4", flag)}>
                       <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-slate-500">{date ? formatTime(date) : "—"}</td>
                       <td className="px-3 py-3">
-                        <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold", meta.tint)}>
+                        <span title={category.label} className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold", meta.tint)}>
                           <Icon className="h-3.5 w-3.5" />
                           {meta.label}
                         </span>

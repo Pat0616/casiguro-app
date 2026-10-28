@@ -235,6 +235,8 @@ export interface CustomerSummary {
 export interface AppNotification {
   id: string;
   type: NotificationType;
+  /** Exact action for the icon, e.g. "payment.void" (see lib/activityIcons). Null on very old rows. */
+  event?: string | null;
   user: string;
   orderRef: string;
   customerName: string;
