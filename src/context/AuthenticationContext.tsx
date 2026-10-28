@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
+import { BASE_URL } from "@/utils/RestAPI";
 const AuthContext = createContext<any>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -8,7 +9,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/api/auth/me", { withCredentials: true })
+      .get(`${BASE_URL}/api/auth/me`, { withCredentials: true })
       .then(res => setUser(res.data))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));

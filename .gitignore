@@ -4,3 +4,8 @@ dist-ssr
 *.local
 .DS_Store
 *.tsbuildinfo
+
+# Local settings (copy .env.sample to .env)
+.env
+.env.*
+!.env.sample

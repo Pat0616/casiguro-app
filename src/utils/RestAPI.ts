@@ -1,6 +1,7 @@
-// src/api/api.ts
+// src/utils/RestAPI.ts
 
-export const BASE_URL = "http://localhost:5000"; // your backend port
+// Backend address: VITE_API_URL in .env (on Vercel, the deployed backend URL); local backend if unset
+export const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/+$/, "");
 
 // A wrapper for fetch
 export async function apiRequest(

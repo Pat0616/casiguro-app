@@ -1,8 +1,9 @@
 // casiguro-app/src/utils/socket.ts
 import { io, Socket } from "socket.io-client";
 import type { AppNotification, Order } from "@/types";
+import { BASE_URL } from "./RestAPI";
 
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = BASE_URL;
 
 let socket: Socket | null = null;
 
