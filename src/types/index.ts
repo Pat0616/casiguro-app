@@ -144,6 +144,7 @@ export interface OrderItem {
 export interface OrderDocuments {
   prNo: string | null; // Customer's Purchase Request No
   poNo: string | null; // Customer's Purchase Order No
+  joNo: string | null; // Job Order No
   siOrNo: string | null; // Sales Invoice / Official Receipt No
   siOrDate: string | null;
   drNo: string | null; // Delivery Receipt No

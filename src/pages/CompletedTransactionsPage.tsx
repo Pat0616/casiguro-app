@@ -42,7 +42,7 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
         o.customerName.toLowerCase().includes(q) ||
         o.product.toLowerCase().includes(q) ||
         o.category.toLowerCase().includes(q) ||
-        [o.soaNo, o.prNo, o.poNo, o.siOrNo, o.drNo].some((ref) => ref?.toLowerCase().includes(q)) ||
+        [o.soaNo, o.prNo, o.poNo, o.joNo, o.siOrNo, o.drNo].some((ref) => ref?.toLowerCase().includes(q)) ||
         (o.items && o.items.some((it) => it.itemName.toLowerCase().includes(q))) ||
         formatDate(recordDate(o)).toLowerCase().includes(q);
       return matchYear && matchMonth && matchPayment && matchQuery;

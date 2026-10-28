@@ -8,6 +8,7 @@ export type OrderDocumentForm = Record<keyof OrderDocuments, string>;
 export const EMPTY_DOCUMENT_FORM: OrderDocumentForm = {
   prNo: "",
   poNo: "",
+  joNo: "",
   siOrNo: "",
   siOrDate: "",
   drNo: "",
@@ -18,6 +19,7 @@ export function toDocumentForm(docs: OrderDocuments): OrderDocumentForm {
   return {
     prNo: docs.prNo ?? "",
     poNo: docs.poNo ?? "",
+    joNo: docs.joNo ?? "",
     siOrNo: docs.siOrNo ?? "",
     siOrDate: docs.siOrDate ?? "",
     drNo: docs.drNo ?? "",
@@ -30,6 +32,7 @@ export function toDocumentPayload(form: OrderDocumentForm): OrderDocuments {
   return {
     prNo: clean(form.prNo),
     poNo: clean(form.poNo),
+    joNo: clean(form.joNo),
     siOrNo: clean(form.siOrNo),
     siOrDate: clean(form.siOrDate),
     drNo: clean(form.drNo),
@@ -45,6 +48,7 @@ export function documentsChanged(form: OrderDocumentForm, docs: OrderDocuments):
 const FIELDS: { key: keyof OrderDocuments; label: string; type: "text" | "date"; placeholder?: string }[] = [
   { key: "prNo", label: "PR No", type: "text", placeholder: "Purchase Request No" },
   { key: "poNo", label: "PO No", type: "text", placeholder: "Purchase Order No" },
+  { key: "joNo", label: "J.O. No", type: "text", placeholder: "Job Order No" },
   { key: "siOrNo", label: "SI/OR No", type: "text", placeholder: "Sales Invoice / Official Receipt No" },
   { key: "siOrDate", label: "SI/OR Date", type: "date" },
   { key: "drNo", label: "DR No", type: "text", placeholder: "Delivery Receipt No" },
