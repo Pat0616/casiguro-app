@@ -29,6 +29,9 @@ import { uploadImageToCloudinary } from "@/utils/CloudinaryAPI";
 import { cn } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
 
+// Select value for the "+ New category…" option (can't clash with a real category name)
+const NEW_CATEGORY = "__new_category__";
+
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // Cloudinary free-plan image limit
 
 function formatCurrency(n: number) {
@@ -59,6 +62,9 @@ export default function ProductServiceCatalogPage() {
     isActive: true,
   });
   const [formCategoryName, setFormCategoryName] = useState("Apparel");
+  // Typing a category that isn't in the list yet; the backend creates it when the item is saved
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
@@ -108,6 +114,8 @@ export default function ProductServiceCatalogPage() {
       isActive: true,
     });
     setFormCategoryName(CATEGORIES[0] || "General");
+    setCreatingCategory(false);
+    setNewCategoryName("");
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -126,6 +134,8 @@ export default function ProductServiceCatalogPage() {
       isActive: item.isActive,
     });
     setFormCategoryName(item.categoryName || "General");
+    setCreatingCategory(false);
+    setNewCategoryName("");
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -206,12 +216,23 @@ export default function ProductServiceCatalogPage() {
       variantNames.add(name.toLowerCase());
     }
 
+    let categoryName = formCategoryName;
+    if (creatingCategory) {
+      const typed = newCategoryName.trim().replace(/\s+/g, " ");
+      if (!typed) {
+        setFormError("Enter a name for the new category, or pick an existing one.");
+        return;
+      }
+      // Reuse an existing category's spelling instead of creating a near-duplicate
+      categoryName = categoryOptions.find((cat) => cat.toLowerCase() === typed.toLowerCase()) ?? typed;
+    }
+
     try {
       setSaving(true);
       setFormError(null);
       const payload: CatalogItemPayload = {
         ...formData,
-        categoryId: formCategoryName,
+        categoryId: categoryName,
       };
 
       if (editingItem) {
@@ -735,17 +756,45 @@ export default function ProductServiceCatalogPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
-                      <select
-                        value={formCategoryName}
-                        onChange={(e) => setFormCategoryName(e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                      >
-                        {categoryOptions.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
+                      {creatingCategory ? (
+                        <>
+                          <input
+                            autoFocus
+                            maxLength={100}
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="New category name"
+                            aria-label="New category name"
+                            className="w-full rounded-lg border border-sky-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCreatingCategory(false);
+                              setNewCategoryName("");
+                            }}
+                            className="mt-1 text-[11px] font-semibold text-slate-500 hover:text-sky-700"
+                          >
+                            Choose an existing category instead
+                          </button>
+                        </>
+                      ) : (
+                        <select
+                          value={formCategoryName}
+                          onChange={(e) => {
+                            if (e.target.value === NEW_CATEGORY) setCreatingCategory(true);
+                            else setFormCategoryName(e.target.value);
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        >
+                          {categoryOptions.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {cat}
+                            </option>
+                          ))}
+                          <option value={NEW_CATEGORY}>+ New category…</option>
+                        </select>
+                      )}
                     </div>
                   </div>
 
