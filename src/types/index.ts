@@ -138,6 +138,8 @@ export interface OrderItem {
   quantityCompleted: number;
   productionProgress: number; // 0 - 100
   productionStatus: OrderStatus;
+  /** The catalog item's current image; none for custom lines */
+  imageUrl?: string | null;
 }
 
 /** Optional reference documents attached to an order. Dates are YYYY-MM-DD. */

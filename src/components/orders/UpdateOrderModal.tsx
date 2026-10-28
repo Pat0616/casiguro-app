@@ -294,8 +294,11 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                     <div key={item.id || idx} className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
                       <div className="flex min-w-0 items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                        <span className="truncate text-sm font-bold text-slate-900">{item.itemName}</span>
-                        {item.selectedVariant && <span className="shrink-0 text-xs font-semibold text-sky-700">{item.selectedVariant}</span>}
+                        <ItemThumbnail item={item} className="h-9 w-9" />
+                        <span className="truncate text-base font-extrabold text-slate-900">{item.itemName}</span>
+                        {item.selectedVariant && (
+                          <span className="shrink-0 rounded-md border border-sky-200 bg-white px-2 py-0.5 text-xs font-bold text-sky-800">{item.selectedVariant}</span>
+                        )}
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
                         <span className="font-mono text-xl font-extrabold text-emerald-700">
@@ -318,13 +321,18 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                   className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-slate-100">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900">{item.itemName}</span>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <ItemThumbnail item={item} className="h-16 w-16" />
+                      <div className="min-w-0">
+                      <p className="font-display text-lg font-extrabold leading-tight text-slate-900">{item.itemName}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
                         {item.selectedVariant && (
-                          <span className="ml-2 text-xs font-semibold text-sky-700">Option: {item.selectedVariant}</span>
+                          <span className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-sm font-bold text-sky-800">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-500">Option</span>
+                            {item.selectedVariant}
+                          </span>
                         )}
-                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
                           {item.itemType === "service" ? (
                             <Briefcase className="h-3 w-3 text-sky-600" />
                           ) : (
@@ -336,6 +344,7 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
                       {item.itemDescription && (
                         <p className="text-xs text-slate-500 mt-0.5">{item.itemDescription}</p>
                       )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
@@ -570,6 +579,28 @@ function CollapsibleSection({
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-slate-400 transition", open && "rotate-180")} />
       </button>
       <div className={cn("border-t border-slate-100 p-3", !open && "hidden")}>{children}</div>
+    </div>
+  );
+}
+
+// The catalog item's picture; custom lines (or items whose picture is missing or broken) show their type icon instead
+function ItemThumbnail({ item, className }: { item: OrderItem; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  const Icon = item.itemType === "service" ? Briefcase : Boxes;
+  if (item.imageUrl && !broken) {
+    return (
+      <img
+        src={item.imageUrl}
+        alt={item.itemName}
+        loading="lazy"
+        onError={() => setBroken(true)}
+        className={cn("shrink-0 rounded-lg border border-slate-200 bg-white object-cover", className)}
+      />
+    );
+  }
+  return (
+    <div className={cn("flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400", className)}>
+      <Icon className="h-1/2 w-1/2" />
     </div>
   );
 }
