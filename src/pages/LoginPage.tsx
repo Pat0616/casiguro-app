@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import '../styles/loginpage.css';
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthenticationContext";
 import {login, getMe} from "../utils/authAPI";
 
@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const dotStyle = { backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)", backgroundSize: "18px 18px" };
   const navigate = useNavigate();
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
   const { setUser } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -90,6 +91,8 @@ export default function LoginPage() {
 
 
           <div className="login-form">
+            {/* e.g. "Your password has been reset..." from the Forgot Password page */}
+            {notice && !error && <div className="form-notice">{notice}</div>}
             {error && (
               <div style={{ padding: "10px 14px", marginBottom: "16px", borderRadius: "10px", backgroundColor: "#fef2f2", color: "#b91c1c", fontSize: "13px", border: "1px solid #fecaca" }}>
                 {error}
@@ -209,12 +212,12 @@ export default function LoginPage() {
                 <span>Remember me</span>
               </label>
 
-              <button
-                type="button"
+              <Link
+                to="/forgot-password"
                 className="forgot-password"
               >
                 Forgot Password?
-              </button>
+              </Link>
 
             </div>
 

@@ -1,4 +1,5 @@
-import { LogOut } from "lucide-react";
+import { useState } from "react";
+import { KeyRound, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ADMIN_PAGE_KEYS, NAV_ITEMS } from "@/lib/constants";
@@ -6,6 +7,7 @@ import Avatar from "@/components/ui/Avatar";
 import { useNavigate } from "react-router-dom";
 import { logout } from "@/utils/authAPI";
 import { useAuth } from "@/context/AuthenticationContext";
+import ChangePasswordModal from "@/components/accounts/ChangePasswordModal";
 
 interface SidebarProps {
   unreadCount: number;
@@ -17,6 +19,7 @@ export default function Sidebar({ onNavigate, unreadCount, pendingAccountsCount 
 
   const navigate = useNavigate();
   const { user, setUser } = useAuth();
+  const [changingPassword, setChangingPassword] = useState(false);
   const visibleNavItems = NAV_ITEMS.filter(
     (item) => user?.role === "admin" || !ADMIN_PAGE_KEYS.includes(item.key)
   );
@@ -81,6 +84,11 @@ export default function Sidebar({ onNavigate, unreadCount, pendingAccountsCount 
             <p className="truncate text-sm font-semibold text-slate-800">{user?.full_name || "Staff"}</p>
             <p className="truncate text-xs text-slate-400 capitalize">{user?.role || "Employee"}</p>
           </div>
+          <button className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-sky-600 transition" title="Change password"
+          onClick={() => setChangingPassword(true)}
+          >
+            <KeyRound className="h-4 w-4" />
+          </button>
           <button className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-sky-600 transition" title="Log out"
           onClick={EnterLogout}
           >
@@ -88,6 +96,7 @@ export default function Sidebar({ onNavigate, unreadCount, pendingAccountsCount 
           </button>
         </div>
       </div>
+      <ChangePasswordModal open={changingPassword} onClose={() => setChangingPassword(false)} />
     </div>
   );
 }

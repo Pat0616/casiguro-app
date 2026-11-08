@@ -550,6 +550,8 @@ body,
 
   padding: 0;
 
+  text-decoration: none;
+
   transition: color 0.2s ease;
 }
 

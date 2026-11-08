@@ -21,8 +21,11 @@ import {
   KeyRound,
   Landmark,
   Lock,
+  LockKeyhole,
+  LockKeyholeOpen,
   LogIn,
   LogOut,
+  MailQuestion,
   PackageCheck,
   PackagePlus,
   PenLine,
@@ -108,6 +111,11 @@ export const ACTIVITY: Record<string, ActivityStyle> = {
   "auth.logout": style(LogOut, TINT.slate, "Signed out"),
   "auth.login_failed": style(KeyRound, TINT.amber, "Wrong password"),
   "auth.login_blocked": style(Lock, TINT.rose, "Sign-in blocked"),
+  // Passwords
+  "auth.password_change": style(LockKeyhole, TINT.green, "Password changed"),
+  "auth.password_change_failed": style(ShieldAlert, TINT.amber, "Password change failed"),
+  "auth.password_reset_request": style(MailQuestion, TINT.sky, "Reset code requested"),
+  "auth.password_reset": style(LockKeyholeOpen, TINT.green, "Password reset"),
 };
 
 const statusTo = (entry: AuditLogEntry) => {
