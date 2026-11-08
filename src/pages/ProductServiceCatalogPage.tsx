@@ -15,7 +15,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import type { CatalogItem, CatalogItemType } from "@/types";
+import type { CatalogItem, CatalogItemType, Category } from "@/types";
 import {
   getCatalogItems,
   createCatalogItem,
@@ -24,13 +24,11 @@ import {
   toggleCatalogItemStatus,
   type CatalogItemPayload,
 } from "@/utils/catalogAPI";
-import { CATEGORIES } from "@/lib/constants";
+import { getCategories } from "@/utils/categoryAPI";
+import CategoryManager from "@/components/catalog/CategoryManager";
 import { uploadImageToCloudinary } from "@/utils/CloudinaryAPI";
 import { cn } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
-
-// Select value for the "+ New category…" option (can't clash with a real category name)
-const NEW_CATEGORY = "__new_category__";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // Cloudinary free-plan image limit
 
@@ -46,6 +44,10 @@ export default function ProductServiceCatalogPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | "product" | "service">("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [view, setView] = useState<"items" | "categories">("items");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,10 +63,6 @@ export default function ProductServiceCatalogPage() {
     isStockItem: false,
     isActive: true,
   });
-  const [formCategoryName, setFormCategoryName] = useState("Apparel");
-  // Typing a category that isn't in the list yet; the backend creates it when the item is saved
-  const [creatingCategory, setCreatingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
@@ -80,7 +78,6 @@ export default function ProductServiceCatalogPage() {
         .filter((category): category is string => Boolean(category)),
     ])
   ).sort((a, b) => a.localeCompare(b));
-  const categoryOptions = Array.from(new Set([...CATEGORIES, ...availableCategories, formCategoryName]));
 
   const fetchItems = async () => {
     try {
@@ -96,8 +93,22 @@ export default function ProductServiceCatalogPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      setCategories(await getCategories());
+    } catch (err: unknown) {
+      console.error("Failed to load categories:", err);
+      setCategoriesError(err instanceof Error ? err.message : "Failed to load categories");
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchItems();
+    fetchCategories();
   }, []);
 
   const handleOpenCreateModal = () => {
@@ -113,9 +124,6 @@ export default function ProductServiceCatalogPage() {
       isStockItem: false,
       isActive: true,
     });
-    setFormCategoryName(CATEGORIES[0] || "General");
-    setCreatingCategory(false);
-    setNewCategoryName("");
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -133,9 +141,6 @@ export default function ProductServiceCatalogPage() {
       isStockItem: item.isStockItem,
       isActive: item.isActive,
     });
-    setFormCategoryName(item.categoryName || "General");
-    setCreatingCategory(false);
-    setNewCategoryName("");
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -216,23 +221,12 @@ export default function ProductServiceCatalogPage() {
       variantNames.add(name.toLowerCase());
     }
 
-    let categoryName = formCategoryName;
-    if (creatingCategory) {
-      const typed = newCategoryName.trim().replace(/\s+/g, " ");
-      if (!typed) {
-        setFormError("Enter a name for the new category, or pick an existing one.");
-        return;
-      }
-      // Reuse an existing category's spelling instead of creating a near-duplicate
-      categoryName = categoryOptions.find((cat) => cat.toLowerCase() === typed.toLowerCase()) ?? typed;
-    }
-
     try {
       setSaving(true);
       setFormError(null);
       const payload: CatalogItemPayload = {
         ...formData,
-        categoryId: categoryName,
+        categoryId: formData.categoryId || null,
       };
 
       if (editingItem) {
@@ -242,7 +236,7 @@ export default function ProductServiceCatalogPage() {
       }
 
       handleCloseModal();
-      await fetchItems();
+      await Promise.all([fetchItems(), fetchCategories()]);
     } catch (err: unknown) {
       console.error("Save catalog item error:", err);
       setFormError(err instanceof Error ? err.message : "Failed to save item");
@@ -315,15 +309,45 @@ export default function ProductServiceCatalogPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
-        >
-          <Plus className="h-4 w-4" />
-          Add Catalog Item
-        </button>
+        {view === "items" && (
+          <button
+            onClick={handleOpenCreateModal}
+            className="flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add Catalog Item
+          </button>
+        )}
       </div>
 
+      {/* Section tabs: catalog items | categories */}
+      <div className="flex gap-1 border-b border-slate-200" role="tablist" aria-label="Catalog sections">
+        {([
+          { key: "items", label: "Catalog Items", count: items.length, Icon: Boxes },
+          { key: "categories", label: "Categories", count: categories.length, Icon: Tag },
+        ] as const).map(({ key, label, count, Icon }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={view === key}
+            onClick={() => setView(key)}
+            className={cn(
+              "-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition",
+              view === key ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:text-slate-800"
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+            <span className={cn("rounded-full px-2 py-0.5 text-[11px]", view === key ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-500")}>
+              {count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {view === "items" ? (
+      <>
       {/* Filter Bar */}
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -548,6 +572,15 @@ export default function ProductServiceCatalogPage() {
           </div>
         )}
       </div>
+      </>
+      ) : (
+        <CategoryManager
+          categories={categories}
+          loading={categoriesLoading}
+          error={categoriesError}
+          onChanged={() => Promise.all([fetchCategories(), fetchItems()]).then(() => undefined)}
+        />
+      )}
 
       {deleteTarget && (
         <div
@@ -756,45 +789,21 @@ export default function ProductServiceCatalogPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
-                      {creatingCategory ? (
-                        <>
-                          <input
-                            autoFocus
-                            maxLength={100}
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder="New category name"
-                            aria-label="New category name"
-                            className="w-full rounded-lg border border-sky-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCreatingCategory(false);
-                              setNewCategoryName("");
-                            }}
-                            className="mt-1 text-[11px] font-semibold text-slate-500 hover:text-sky-700"
-                          >
-                            Choose an existing category instead
-                          </button>
-                        </>
-                      ) : (
-                        <select
-                          value={formCategoryName}
-                          onChange={(e) => {
-                            if (e.target.value === NEW_CATEGORY) setCreatingCategory(true);
-                            else setFormCategoryName(e.target.value);
-                          }}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                        >
-                          {categoryOptions.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                          <option value={NEW_CATEGORY}>+ New category…</option>
-                        </select>
-                      )}
+                      <select
+                        value={formData.categoryId || ""}
+                        onChange={(e) => setFormData({ ...formData, categoryId: e.target.value || null })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      >
+                        <option value="">General (no category)</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {categories.length === 0 ? "No categories yet. " : ""}New categories are added in the Categories tab.
+                      </p>
                     </div>
                   </div>
 

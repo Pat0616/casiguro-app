@@ -26,14 +26,8 @@ export const NAV_ITEMS: { key: PageKey; label: string; icon: typeof LayoutDashbo
 // Pages only admins can open (also enforced by ProtectedAdminRoute and server-side requireAdmin)
 export const ADMIN_PAGE_KEYS: PageKey[] = ["dashboard", "statistics", "products-services", "accounts"];
 
-export const CATEGORIES = [
-  "Apparel",
-  "Signage",
-  "Stickers & Labels",
-  "Accessories",
-  "School Supplies",
-  "Merchandise",
-];
+// Categories are not hardcoded: they live in the `categories` table and are managed on the Catalog page
+// (Categories tab). Load them with utils/categoryAPI.ts#getCategories.
 
 export const ORDER_STATUS: Record<OrderStatus, { label: string; badge: string; dot: string }> = {
   pending: { label: "Pending", badge: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },

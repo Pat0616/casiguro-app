@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import type { ShoppingCartLine } from "@/components/catalog/ShoppingCartPanel";
-import { CATEGORIES } from "@/lib/constants";
+import { withCurrent } from "@/utils/categoryAPI";
 import { cn, formatCurrency } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
 import QuantityInput from "@/components/ui/QuantityInput";
@@ -10,6 +10,8 @@ type EditableField = "itemName" | "category" | "quantity" | "finalUnitPrice" | "
 
 interface QuotationItemsTableProps {
   items: ShoppingCartLine[];
+  // Options for a custom line's category ("General" first), from categoryOptionNames()
+  categoryNames: string[];
   totalQuantity: number;
   totalAmount: number;
   onChange: (tempId: string, field: EditableField, value: string) => void;
@@ -21,7 +23,7 @@ interface QuotationItemsTableProps {
 const cellInput =
   "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-slate-900 transition hover:border-slate-200 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500";
 
-export default function QuotationItemsTable({ items, totalQuantity, totalAmount, onChange, onRemove, onAddCustom }: QuotationItemsTableProps) {
+export default function QuotationItemsTable({ items, categoryNames, totalQuantity, totalAmount, onChange, onRemove, onAddCustom }: QuotationItemsTableProps) {
   return (
     <section className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
@@ -83,7 +85,7 @@ export default function QuotationItemsTable({ items, totalQuantity, totalAmount,
                               aria-label={`Item ${index + 1} category`}
                               className="rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-[11px] text-slate-500 hover:border-slate-200 focus:border-sky-500 focus:outline-none"
                             >
-                              {["General", ...CATEGORIES].map((category) => <option key={category} value={category}>{category}</option>)}
+                              {withCurrent(categoryNames, item.category).map((category) => <option key={category} value={category}>{category}</option>)}
                             </select>
                           </div>
                         ) : (

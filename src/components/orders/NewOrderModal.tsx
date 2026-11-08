@@ -13,7 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { cn, formatCurrency, todayKey } from "@/lib/utils";
-import { CATEGORIES, PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import type { CatalogItem, NewOrderFormData, OrderType, PaymentMethod } from "@/types";
 import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
@@ -26,6 +26,7 @@ import OrderDocumentFields, { EMPTY_DOCUMENT_FORM, SoaSummary, toDocumentPayload
 import PaymentFields, { EMPTY_PAYMENT_FORM, toPaymentInput } from "@/components/orders/PaymentFields";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { getCatalogItems } from "@/utils/catalogAPI";
+import { categoryOptionNames, getCategories, withCurrent } from "@/utils/categoryAPI";
 
 interface NewOrderModalProps {
   open: boolean;
@@ -81,6 +82,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
   const [documents, setDocuments] = useState(EMPTY_DOCUMENT_FORM);
   const [customers, setCustomers] = useState<CustomerSuggestion[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [categoryNames, setCategoryNames] = useState<string[]>(["General"]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -109,6 +111,10 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
         setFormError(err instanceof Error ? err.message : "Failed to load products and customers.");
       })
       .finally(() => setLoadingCatalog(false));
+    // Only needed for custom lines, so a failure just leaves "General"
+    getCategories()
+      .then((categories) => setCategoryNames(categoryOptionNames(categories)))
+      .catch((err) => console.error("Error loading categories:", err));
   }, [open]);
 
   useEffect(() => {
@@ -272,7 +278,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       customerName: form.customerName.trim(),
       contactNumber: form.contactNumber.trim(),
       product: mappedItems.map((item) => item.itemName).join(", "),
-      category: mappedItems[0]?.category || CATEGORIES[0],
+      category: mappedItems[0]?.category || "General",
       quantity: totalQuantity,
       unitPrice: mappedItems[0]?.finalUnitPrice || 0,
       notes: form.notes.trim(),
@@ -351,6 +357,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                 className="h-full"
                 items={items}
                 catalogItems={catalogItems}
+                categoryNames={categoryNames}
                 totalQuantity={totalQuantity}
                 totalAmount={totalOrderAmount}
                 onAddCustom={() => setItems((prev) => [...prev, makeEmptyItem()])}
@@ -390,7 +397,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                                 <div className="space-y-2">
                                   <input value={item.itemName} onChange={(event) => handleChangeItem(item.tempId, "itemName", event.target.value)} placeholder="Custom item name" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold" />
                                   <select value={item.category} onChange={(event) => handleChangeItem(item.tempId, "category", event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
-                                    {CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+                                    {withCurrent(categoryNames, item.category).map((category) => <option key={category} value={category}>{category}</option>)}
                                   </select>
                                 </div>
                               ) : (
@@ -437,6 +444,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                     className="flex-1"
                     items={items}
                     catalogItems={catalogItems}
+                    categoryNames={categoryNames}
                     totalQuantity={totalQuantity}
                     totalAmount={totalOrderAmount}
                     onAddCustom={() => setItems((prev) => [...prev, makeEmptyItem()])}

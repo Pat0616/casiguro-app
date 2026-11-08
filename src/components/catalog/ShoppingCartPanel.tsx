@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Briefcase, ChevronLeft, ChevronRight, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
 import type { CatalogItem } from "@/types";
-import { CATEGORIES } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
 import QuantityInput from "@/components/ui/QuantityInput";
+import { withCurrent } from "@/utils/categoryAPI";
 
 export interface ShoppingCartLine {
   tempId: string;
@@ -25,6 +25,8 @@ export interface ShoppingCartLine {
 interface ShoppingCartPanelProps {
   items: ShoppingCartLine[];
   catalogItems: CatalogItem[];
+  // Options for a custom line's category ("General" first), from categoryOptionNames()
+  categoryNames: string[];
   totalQuantity: number;
   totalAmount: number;
   onAddCustom: () => void;
@@ -44,6 +46,7 @@ interface ShoppingCartPanelProps {
 export default function ShoppingCartPanel({
   items,
   catalogItems,
+  categoryNames,
   totalQuantity,
   totalAmount,
   onAddCustom,
@@ -143,7 +146,7 @@ export default function ShoppingCartPanel({
                         onChange={(event) => onChange(item.tempId, "category", event.target.value)}
                         className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600"
                       >
-                        {["General", ...CATEGORIES].map((category) => <option key={category} value={category}>{category}</option>)}
+                        {withCurrent(categoryNames, item.category).map((category) => <option key={category} value={category}>{category}</option>)}
                       </select>
                     )}
                   </div>

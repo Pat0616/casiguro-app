@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { AlertCircle, Calendar, Check, Phone, Plus, Save, Send, User } from "lucide-react";
 import type { CatalogItem, Quotation, QuotationItem } from "@/types";
 import { getCatalogItems } from "@/utils/catalogAPI";
+import { categoryOptionNames, getCategories } from "@/utils/categoryAPI";
 import { createQuotation, type NewQuotationPayload } from "@/utils/quotationAPI";
 import { getCustomers, type CustomerSuggestion } from "@/utils/customerAPI";
 import { formatCurrency } from "@/lib/utils";
@@ -53,6 +54,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
   const customerContainerRef = useRef<HTMLDivElement>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [categoryNames, setCategoryNames] = useState<string[]>(["General"]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [items, setItems] = useState<QuotationCartItem[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
@@ -74,6 +76,10 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
         setDependencyError(error instanceof Error ? error.message : "Could not load the catalog and customer list.");
       })
       .finally(() => setLoadingCatalog(false));
+    // Only needed for custom lines, so a failure just leaves "General"
+    getCategories()
+      .then((categories) => setCategoryNames(categoryOptionNames(categories)))
+      .catch((error: unknown) => console.error("Error loading categories:", error));
   }, [open]);
 
   useEffect(() => {
@@ -328,6 +334,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
               <div className="flex min-h-0 flex-1 flex-col gap-3">
                 <QuotationItemsTable
                   items={items}
+                  categoryNames={categoryNames}
                   totalQuantity={totalQuotationQuantity}
                   totalAmount={totalQuotationAmount}
                   onAddCustom={() => setItems((prev) => [...prev, makeCartItem()])}

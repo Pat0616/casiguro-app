@@ -84,6 +84,15 @@ export interface CatalogItem {
   updatedAt?: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt?: string;
+  productCount: number;
+  orderCount: number;
+}
+
 export interface QuotationItem {
   id?: string;
   quotationId?: string;
