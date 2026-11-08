@@ -4,6 +4,7 @@ import type { ShoppingCartLine } from "@/components/catalog/ShoppingCartPanel";
 import { CATEGORIES } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
+import QuantityInput from "@/components/ui/QuantityInput";
 
 type EditableField = "itemName" | "category" | "quantity" | "finalUnitPrice" | "priceAdjustmentReason";
 
@@ -96,11 +97,9 @@ export default function QuotationItemsTable({ items, totalQuantity, totalAmount,
                       </td>
                       <td className="px-3 py-2.5 text-slate-700">{item.selectedVariant || <span className="text-slate-300">—</span>}</td>
                       <td className="px-3 py-1.5">
-                        <input
-                          type="number"
-                          min="1"
+                        <QuantityInput
                           value={item.quantity}
-                          onChange={(event) => onChange(item.tempId, "quantity", event.target.value)}
+                          onChange={(quantity) => onChange(item.tempId, "quantity", String(quantity))}
                           aria-label={`Item ${index + 1} quantity`}
                           className={cn(cellInput, "text-center font-mono")}
                         />

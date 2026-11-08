@@ -4,6 +4,7 @@ import type { CatalogItem } from "@/types";
 import { CATEGORIES } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
+import QuantityInput from "@/components/ui/QuantityInput";
 
 export interface ShoppingCartLine {
   tempId: string;
@@ -151,11 +152,9 @@ export default function ShoppingCartPanel({
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <label className="text-[11px] font-semibold text-slate-600">
                     Quantity
-                    <input
-                      type="number"
-                      min="1"
+                    <QuantityInput
                       value={item.quantity}
-                      onChange={(event) => onChange(item.tempId, "quantity", event.target.value)}
+                      onChange={(quantity) => onChange(item.tempId, "quantity", String(quantity))}
                       className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                     />
                   </label>

@@ -167,7 +167,7 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
     setItems((prev) =>
       prev.map((item) => {
         if (item.tempId !== tempId) return item;
-        const quantity = field === "quantity" ? Math.max(1, Number(value) || 1) : item.quantity;
+        const quantity = field === "quantity" ? Math.max(0, Math.floor(Number(value) || 0)) : item.quantity;
         const finalUnitPrice = field === "finalUnitPrice" ? Math.max(0, Number(value) || 0) : item.finalUnitPrice;
         return {
           ...item,
@@ -188,6 +188,10 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
     for (const [index, item] of items.entries()) {
       if (!item.itemName.trim()) {
         setFormError(`Add a name for item #${index + 1}.`);
+        return;
+      }
+      if (item.quantity < 1) {
+        setFormError(`Enter a quantity of at least 1 for ${item.itemName}.`);
         return;
       }
       if (!item.isCustom && item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001 && !item.priceAdjustmentReason?.trim()) {
@@ -218,6 +222,11 @@ export default function NewQuotationModal({ open, onClose, onCreated }: NewQuota
     for (const [index, item] of items.entries()) {
       if (!item.itemName.trim()) {
         setFormError(`Add a name for item #${index + 1}.`);
+        setStep(1);
+        return;
+      }
+      if (item.quantity < 1) {
+        setFormError(`Enter a quantity of at least 1 for ${item.itemName}.`);
         setStep(1);
         return;
       }

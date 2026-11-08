@@ -19,6 +19,7 @@ import Modal from "@/components/ui/Modal";
 import Field, { inputClass } from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
 import PriceInput from "@/components/ui/PriceInput";
+import QuantityInput from "@/components/ui/QuantityInput";
 import CatalogShoppingGrid from "@/components/catalog/CatalogShoppingGrid";
 import ShoppingCartPanel from "@/components/catalog/ShoppingCartPanel";
 import OrderDocumentFields, { EMPTY_DOCUMENT_FORM, SoaSummary, toDocumentPayload } from "@/components/orders/OrderDocumentFields";
@@ -189,7 +190,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
     setItems((prev) =>
       prev.map((item) => {
         if (item.tempId !== tempId) return item;
-        const quantity = field === "quantity" ? Math.max(1, Number(value) || 1) : item.quantity;
+        const quantity = field === "quantity" ? Math.max(0, Math.floor(Number(value) || 0)) : item.quantity;
         const finalUnitPrice = field === "finalUnitPrice" ? Math.max(0, Number(value) || 0) : item.finalUnitPrice;
         return {
           ...item,
@@ -210,6 +211,10 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
     for (const [index, item] of items.entries()) {
       if (!item.itemName.trim()) {
         setFormError(`Add a name for item #${index + 1}.`);
+        return;
+      }
+      if (item.quantity < 1) {
+        setFormError(`Enter a quantity of at least 1 for ${item.itemName}.`);
         return;
       }
       if (item.productServiceId && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001 && !item.priceAdjustmentReason.trim()) {
@@ -233,6 +238,8 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
       setFormError("Due date is required.");
       return;
     }
+    const noQuantity = items.find((item) => item.quantity < 1);
+    if (noQuantity) return setFormError(`Enter a quantity of at least 1 for ${noQuantity.itemName || "every item"}.`);
     const isStock = orderType === "stock";
     const withDownPayment = !isStock && takeDownPayment;
     if (withDownPayment) {
@@ -395,7 +402,7 @@ export default function NewOrderModal({ open, onClose, onCreate }: NewOrderModal
                             <button type="button" onClick={() => setItems((prev) => prev.filter((line) => line.tempId !== item.tempId))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${item.itemName || "custom item"}`}><Trash2 className="h-4 w-4" /></button>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-3">
-                            <label className="text-xs font-semibold text-slate-600">Quantity<input type="number" min="1" value={item.quantity} onChange={(event) => handleChangeItem(item.tempId, "quantity", event.target.value)} className={cn(inputClass, "mt-1")} /></label>
+                            <label className="text-xs font-semibold text-slate-600">Quantity<QuantityInput value={item.quantity} onChange={(quantity) => handleChangeItem(item.tempId, "quantity", String(quantity))} className={cn(inputClass, "mt-1")} /></label>
                             <label className="text-xs font-semibold text-slate-600">Final unit price<PriceInput value={item.finalUnitPrice} onChange={(price) => handleChangeItem(item.tempId, "finalUnitPrice", String(price))} className={cn(inputClass, "mt-1", adjusted && "border-amber-400 bg-amber-50")} /></label>
                             <div className="text-xs font-semibold text-slate-600">Subtotal<p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-900">{formatCurrency(item.subtotal)}</p></div>
                           </div>
