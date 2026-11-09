@@ -3,6 +3,8 @@
 import type { PaymentInput, PaymentMethod, PaymentType } from "@/types";
 import { PAYMENT_METHOD_LABELS, PAYMENT_TYPE_LABELS } from "@/lib/constants";
 import Field, { inputClass } from "@/components/ui/Field";
+import MoneyInput from "@/components/ui/MoneyInput";
+import { formatCurrency } from "@/lib/utils";
 
 export interface PaymentForm {
   paymentType: PaymentType;
@@ -86,18 +88,12 @@ export default function PaymentFields({ value, onChange, types = ["payment", "do
         </Field>
       )}
       <Field label={isEwt ? "Amount withheld (₱)" : "Amount (₱)"}>
-        {/* Text input so there are no spinner arrows; only digits and up to 2 decimals are accepted */}
-        <input
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder={maxAmount != null ? `Up to ${maxAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : "0.00"}
+        {/* Shows ₱ and commas while typing; value.amount stays plain digits (e.g. "12500.75") */}
+        <MoneyInput
+          placeholder={maxAmount != null ? `Up to ${formatCurrency(maxAmount)}` : "₱0.00"}
           className={inputClass}
           value={value.amount}
-          onChange={(e) => {
-            const amount = e.target.value.trim();
-            if (/^\d*\.?\d{0,2}$/.test(amount)) set({ amount });
-          }}
+          onValueChange={(amount) => set({ amount })}
         />
       </Field>
       <Field label="Date received (blank = today)">

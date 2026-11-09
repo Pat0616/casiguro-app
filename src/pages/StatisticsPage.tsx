@@ -176,7 +176,7 @@ export default function StatisticsPage({ orders }: { orders: Order[] }) {
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₱${v / 1000}k`} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₱${(v / 1000).toLocaleString("en-PH")}k`} />
                 <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: 12, border: "1px solid #f1f5f9" }} />
                 <Line type="monotone" dataKey="revenue" stroke="#db2777" strokeWidth={2.5} dot={false} />
               </LineChart>
