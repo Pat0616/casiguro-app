@@ -4,6 +4,7 @@
 import {
   Ban,
   Banknote,
+  CalendarClock,
   CalendarX,
   CircleCheckBig,
   Download,
@@ -77,6 +78,7 @@ export const ACTIVITY: Record<string, ActivityStyle> = {
   "order.completed": style(CircleCheckBig, TINT.green, "Order completed"),
   "order.update": style(PenLine, TINT.amber, "Order edited"),
   "order.documents_update": style(FilePen, TINT.amber, "Documents edited"),
+  "order.deadline_change": style(CalendarClock, TINT.amber, "Deadline changed"),
   "order.cancel": style(Ban, TINT.rose, "Order cancelled"),
   // Payments
   "payment.record": style(Banknote, TINT.green, "Payment recorded"),

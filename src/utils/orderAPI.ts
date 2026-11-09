@@ -31,6 +31,14 @@ export function updateOrderDocuments(id: string, documents: OrderDocuments): Pro
   });
 }
 
+/** Open orders only; dueDate is YYYY-MM-DD (today or later), reason is required */
+export function updateOrderDueDate(id: string, payload: { dueDate: string; reason: string }): Promise<Order> {
+  return apiRequest(`/api/orders/${id}/due-date`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updateItemProduction(
   orderId: string,
   payload: {

@@ -18,6 +18,7 @@ import { cancelOrder, getOrderById, updateItemProduction, updateOrder, updateOrd
 import { useAuth } from "@/context/AuthenticationContext";
 import PaymentsPanel from "@/components/orders/PaymentsPanel";
 import ReasonModal from "@/components/orders/ReasonModal";
+import DeadlineModal from "@/components/orders/DeadlineModal";
 import ProductionQtyInput, { parseAdded } from "@/components/orders/ProductionQtyInput";
 
 interface UpdateOrderModalProps {
@@ -37,6 +38,7 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   const [documents, setDocuments] = useState(EMPTY_DOCUMENT_FORM);
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [editDeadline, setEditDeadline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Concurrency: `baseline` is the server value each item's edit started from (sent back on save so the server can
   // refuse a stale save), `dirty` the items this user changed, `conflicts` the new server value of a dirty item
@@ -131,7 +133,9 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   const piecesLeft = Math.max(0, totalQuantity - totalQuantityCompleted);
   const changedItemCount = items.filter((it) => it.quantityCompleted !== savedOf(it)).length;
   const docsChanged = documentsChanged(documents, liveOrder);
-  const due = dueText(order.dueDate);
+  const due = dueText(liveOrder.dueDate);
+  // Open orders only (the server enforces the same rule)
+  const canChangeDeadline = ["pending", "in_production", "ready"].includes(liveOrder.status);
   const activePayments = (liveOrder.payments || []).filter((p) => !p.voidedAt);
   const docSummary = [
     ["PR", documents.prNo],
@@ -265,8 +269,17 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
             <Badge config={ORDER_STATUS[derivedOrderStatus]} label={ORDER_STATUS[derivedOrderStatus].label} />
             <span className="flex items-center gap-1.5 text-slate-600">
               <CalendarClock className="h-4 w-4 text-slate-400" />
-              Due <strong className="text-slate-800">{formatDate(order.dueDate)}</strong>
+              Due <strong className="text-slate-800">{formatDate(liveOrder.dueDate)}</strong>
               <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", due.tone)}>{due.text}</span>
+              {canChangeDeadline && (
+                <button
+                  type="button"
+                  onClick={() => setEditDeadline(true)}
+                  className="ml-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-50"
+                >
+                  Change
+                </button>
+              )}
             </span>
           </div>
         </div>
@@ -511,6 +524,13 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
           onClose();
         }}
         onClose={() => setConfirmCancel(false)}
+      />
+
+      {/* Saves on its own, like payments; the production modal stays open */}
+      <DeadlineModal
+        order={editDeadline ? liveOrder : null}
+        onClose={() => setEditDeadline(false)}
+        onSaved={handlePaymentChange}
       />
     </Modal>
   );
