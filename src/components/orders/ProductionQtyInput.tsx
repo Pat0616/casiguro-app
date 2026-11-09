@@ -78,16 +78,15 @@ export default function ProductionQtyInput({ quantity, completedBefore, value, o
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {[1, 5, 10, 50].map((step) => (
-            <button key={step} type="button" onClick={() => set(added + step)} disabled={added + step > maxAdd} className={chip}>
-              +{step}
-            </button>
-          ))}
-          <button type="button" onClick={() => set(maxAdd)} disabled={allDoneBefore || added === maxAdd} className={chip}>
-            Rest ({Math.max(0, maxAdd)})
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => set(maxAdd)}
+          disabled={allDoneBefore || added === maxAdd}
+          aria-label={`Mark the remaining ${Math.max(0, maxAdd)} pcs as finished`}
+          className={chip}
+        >
+          Finish ({Math.max(0, maxAdd)})
+        </button>
       </div>
 
       {added !== 0 && (
