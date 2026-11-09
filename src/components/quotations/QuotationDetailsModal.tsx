@@ -18,6 +18,7 @@ import {
   Download,
 } from "lucide-react";
 import type { Quotation, Order } from "@/types";
+import { MOBILE_CARD_LIST } from "@/lib/constants";
 import {
   updateQuotationStatus,
   acceptAndConvertToOrder,
@@ -314,7 +315,40 @@ export default function QuotationDetailsModal({
               <span>Financial Snapshot</span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Phones: one card per line item instead of a sideways-scrolling table */}
+            <ul className={`${MOBILE_CARD_LIST} text-xs md:hidden`}>
+              {quotation.items.map((it, idx) => {
+                const hasAdjustment = !it.isCustom && it.basePrice > 0 && Math.abs(it.finalUnitPrice - it.basePrice) > 0.001;
+                return (
+                  <li key={it.id || idx} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900">{it.itemName}</p>
+                        {it.selectedVariant && <p className="text-[11px] font-semibold text-sky-700">Option: {it.selectedVariant}</p>}
+                      </div>
+                      <span className="shrink-0 font-mono font-bold text-slate-900">{formatCurrency(it.subtotal)}</span>
+                    </div>
+                    {it.itemDescription && <p className="mt-0.5 text-[11px] text-slate-500">{it.itemDescription}</p>}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-slate-600">
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        {it.itemType === "service" ? <Briefcase className="h-3 w-3 text-sky-600" /> : <Boxes className="h-3 w-3 text-sky-600" />}
+                        {it.category || "General"}
+                      </span>
+                      <span className="font-mono">
+                        {it.quantity} × {formatCurrency(it.finalUnitPrice)}
+                        {hasAdjustment && <span className="ml-1 text-slate-400 line-through">{formatCurrency(it.basePrice)}</span>}
+                      </span>
+                    </div>
+                    {hasAdjustment && it.priceAdjustmentReason && (
+                      <p className="mt-1 inline-block rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                        Reason: {it.priceAdjustmentReason}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50/50 border-b border-slate-100 text-[11px] text-slate-500 uppercase">
                   <tr>

@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import { GRADIENT, MOBILE_CARD_LIST, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import type { CustomerPaymentFilter, CustomerSummary, Order } from "@/types";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -201,11 +201,61 @@ export default function CustomerOverviewPage({ orders, onOrderChange }: Customer
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <div>
               <h2 className="font-bold text-slate-900">Customer List</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Select a customer name or details button to view their profile and orders.</p>
+              <p className="mt-0.5 text-xs text-slate-500">Select a customer to view their profile and orders.</p>
             </div>
             <span className="text-xs font-semibold text-slate-500">{filteredCustomers.length} customers</span>
           </div>
-          <div className="overflow-x-auto">
+          {/* Phones: one card per customer instead of a sideways-scrolling table */}
+          <ul className={`${MOBILE_CARD_LIST} md:hidden`}>
+            {filteredCustomers.map((customer) => (
+              <li key={customer.name}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerName(customer.name)}
+                  className="block w-full px-4 py-3 text-left transition active:bg-slate-50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar name={customer.name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-900">{customer.name}</p>
+                        <p className="flex items-center gap-1 text-xs text-slate-500">
+                          <Phone className="h-3 w-3" />
+                          {customer.contactNumber}
+                        </p>
+                      </div>
+                    </div>
+                    {customer.standing === "good" ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                        <CheckCircle2 className="h-3 w-3" /> Good
+                      </span>
+                    ) : (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700">
+                        <AlertCircle className="h-3 w-3" /> Outstanding
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    {customer.totalOrders} order{customer.totalOrders === 1 ? "" : "s"} ({customer.activeOrders} active · {customer.completedOrders} completed) · last{" "}
+                    {formatDate(customer.lastOrderDate)}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                    <span>
+                      <span className="text-xs text-slate-500">Spent </span>
+                      <span className="font-semibold text-slate-800">{formatCurrency(customer.totalSpent)}</span>
+                    </span>
+                    <span>
+                      <span className="text-xs text-slate-500">Balance </span>
+                      <span className={cn("font-semibold", customer.totalBalance > 0 ? "text-rose-700" : "text-slate-500")}>
+                        {formatCurrency(customer.totalBalance)}
+                      </span>
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[850px] text-left text-sm">
               <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 <tr>

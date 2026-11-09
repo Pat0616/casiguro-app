@@ -166,7 +166,73 @@ export default function AccountAuditLog({ account, category, onCategoryChange }:
           <EmptyState icon={History} title="No activity found" subtitle="Nothing matches these filters yet." />
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Phones: one card per entry instead of a sideways-scrolling table */}
+        <ul className="bg-slate-100/70 px-3 pb-3 md:hidden">
+          {entries.map((entry, index) => {
+            const date = parseServerDate(entry.createdAt);
+            const day = date ? formatDay(date) : "";
+            const previous = index > 0 ? parseServerDate(entries[index - 1].createdAt) : null;
+            const showDay = index === 0 || day !== (previous ? formatDay(previous) : "");
+            const category = AUDIT_CATEGORY[entry.category] || AUDIT_CATEGORY.account;
+            const meta = ACTIVITY[auditEvent(entry)] || category;
+            const Icon = meta.icon;
+            const changeEntries = entry.changes ? Object.entries(entry.changes) : [];
+            const isOpen = expanded.has(entry.id);
+            const flag = FLAGGED_ACTIONS[entry.action];
+            const ip = entry.ipAddress === "::1" || entry.ipAddress === "127.0.0.1" ? "This computer" : entry.ipAddress;
+            return (
+              <li key={entry.id}>
+                {showDay && (
+                  <p className="px-1 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">{day}</p>
+                )}
+                {/* Flagged entries (failed logins etc.) keep their tint instead of the white card background */}
+                <div className={cn("mb-2.5 overflow-hidden rounded-xl border border-slate-200 px-4 py-3 shadow-sm", flag ? `border-l-4 ${flag}` : "bg-white")}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span title={category.label} className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold", meta.tint)}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {meta.label}
+                    </span>
+                    <span className="font-mono text-xs text-slate-500">{date ? formatTime(date) : "—"}</span>
+                  </div>
+                  <p className="mt-1.5 text-sm text-slate-800">{entry.description}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400">
+                    {entry.entityLabel && (
+                      <span className="max-w-full truncate rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{entry.entityLabel}</span>
+                    )}
+                    {ip && <span className="font-mono">{ip}</span>}
+                  </div>
+                  {changeEntries.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => toggle(entry.id)}
+                      aria-expanded={isOpen}
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-md py-1 text-xs font-semibold text-sky-700"
+                    >
+                      {changeEntries.length} change{changeEntries.length === 1 ? "" : "s"}
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition", isOpen && "rotate-180")} />
+                    </button>
+                  )}
+                  {isOpen && (
+                    <dl className="mt-1 space-y-1.5 rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                      {changeEntries.map(([field, change]) => (
+                        <div key={field}>
+                          <dt className="font-medium text-slate-600">{fieldLabel(field)}</dt>
+                          <dd className="break-all">
+                            <span className="text-slate-400 line-through decoration-slate-300">{formatChangeValue(field, change?.from)}</span>
+                            <span className="mx-1 text-slate-300">→</span>
+                            <span className="font-semibold text-slate-800">{formatChangeValue(field, change?.to)}</span>
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-400">
@@ -270,6 +336,7 @@ export default function AccountAuditLog({ account, category, onCategoryChange }:
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {!loading && entries.length > 0 && (

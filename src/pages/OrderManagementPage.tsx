@@ -15,6 +15,7 @@ import {
   Eye,
 } from "lucide-react";
 import type { NewOrderFormData, Order, Quotation, QuotationStatus } from "@/types";
+import { MOBILE_CARD_LIST } from "@/lib/constants";
 import SectionHeading from "@/components/ui/SectionHeading";
 import MiniCalendar from "@/components/orders/MiniCalendar";
 import DeadlinePanel from "@/components/orders/DeadlinePanel";
@@ -239,7 +240,43 @@ export default function OrderManagementPage({ orders, onCreateOrder, onOrderSave
                 No quotations found matching the selected criteria.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              {/* Phones: one card per quotation instead of a sideways-scrolling table */}
+              <ul className={`${MOBILE_CARD_LIST} md:hidden`}>
+                {filteredQuotations.map((q) => (
+                  <li key={q.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedQuote(q);
+                        setDetailsModalOpen(true);
+                      }}
+                      className="block w-full px-4 py-3 text-left transition active:bg-slate-50"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-slate-900">{q.customerName}</p>
+                          <p className="text-xs text-slate-500">
+                            <span className="font-mono font-bold text-slate-700">{q.quoteNo}</span> ·{" "}
+                            {new Date(q.createdAt).toLocaleDateString("en-PH")}
+                          </p>
+                        </div>
+                        {getStatusBadge(q.status)}
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                        {q.items && q.items.length > 0
+                          ? q.items.map((it) => `${it.itemName}${it.selectedVariant ? ` (${it.selectedVariant})` : ""} (×${it.quantity})`).join(", ")
+                          : "No items"}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="font-mono font-bold text-slate-900">{formatCurrency(q.totalAmount)}</span>
+                        <span className="text-xs text-slate-500">Valid until {q.validUntil}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-500">
                     <tr>
@@ -301,6 +338,7 @@ export default function OrderManagementPage({ orders, onCreateOrder, onOrderSave
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </div>

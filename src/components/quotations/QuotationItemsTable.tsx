@@ -3,6 +3,7 @@ import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import type { ShoppingCartLine } from "@/components/catalog/ShoppingCartPanel";
 import { withCurrent } from "@/utils/categoryAPI";
 import { cn, formatCurrency } from "@/lib/utils";
+import { MOBILE_CARD_LIST } from "@/lib/constants";
 import PriceInput from "@/components/ui/PriceInput";
 import QuantityInput from "@/components/ui/QuantityInput";
 
@@ -41,7 +42,126 @@ export default function QuotationItemsTable({ items, categoryNames, totalQuantit
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      {/* Phones: one editable card per line instead of a sideways-scrolling table */}
+      <div className="min-h-0 flex-1 overflow-auto md:hidden">
+        {items.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-slate-500">
+            No items yet. Choose products or services from the catalog, or add a custom line.
+          </p>
+        ) : (
+          <ol className={MOBILE_CARD_LIST}>
+            {items.map((item, index) => {
+              const adjusted = !item.isCustom && Math.abs(item.finalUnitPrice - item.basePrice) > 0.001;
+              const needsReason = adjusted && !item.priceAdjustmentReason?.trim();
+              return (
+                <li key={item.tempId} className="space-y-2 px-4 py-3">
+                  <div className="flex items-start gap-2">
+                    <span className="mt-1.5 w-5 shrink-0 font-mono text-xs text-slate-400">{index + 1}.</span>
+                    <div className="min-w-0 flex-1">
+                      {item.isCustom ? (
+                        <div className="space-y-1">
+                          <input
+                            value={item.itemName}
+                            onChange={(event) => onChange(item.tempId, "itemName", event.target.value)}
+                            placeholder="Describe the item or service"
+                            aria-label={`Item ${index + 1} description`}
+                            className={cn(cellInput, "border-slate-200 bg-white font-semibold")}
+                          />
+                          <select
+                            value={item.category || "General"}
+                            onChange={(event) => onChange(item.tempId, "category", event.target.value)}
+                            aria-label={`Item ${index + 1} category`}
+                            className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-600 focus:border-sky-500 focus:outline-none"
+                          >
+                            {withCurrent(categoryNames, item.category).map((category) => <option key={category} value={category}>{category}</option>)}
+                          </select>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="font-semibold text-slate-900">{item.itemName}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {item.category || "General"} · {item.itemType === "service" ? "Service" : "Product"}
+                            {item.selectedVariant && ` · ${item.selectedVariant}`}
+                          </p>
+                        </>
+                      )}
+                      {item.isCustom && item.selectedVariant && <p className="mt-1 text-[11px] text-slate-500">{item.selectedVariant}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onRemove(item.tempId)}
+                      aria-label={`Remove item ${index + 1}`}
+                      className="shrink-0 rounded-md p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-[5rem_1fr] gap-2 pl-7">
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      Qty
+                      <QuantityInput
+                        value={item.quantity}
+                        onChange={(quantity) => onChange(item.tempId, "quantity", String(quantity))}
+                        aria-label={`Item ${index + 1} quantity`}
+                        className={cn(cellInput, "mt-0.5 border-slate-200 bg-white text-center font-mono")}
+                      />
+                    </label>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      Unit price
+                      <PriceInput
+                        value={item.finalUnitPrice}
+                        onChange={(price) => onChange(item.tempId, "finalUnitPrice", String(price))}
+                        aria-label={`Item ${index + 1} unit price`}
+                        className={cn(cellInput, "mt-0.5 border-slate-200 bg-white text-right font-mono", adjusted && "border-amber-300 bg-amber-50")}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between pl-7 text-xs">
+                    <span className="text-slate-400">{adjusted && <span className="line-through">{formatCurrency(item.basePrice)}</span>}</span>
+                    <span>
+                      <span className="text-slate-500">Amount </span>
+                      <span className="font-mono font-semibold text-slate-900">{formatCurrency(item.subtotal)}</span>
+                    </span>
+                  </div>
+
+                  {adjusted && (
+                    <label className="ml-7 block rounded-md bg-amber-50 px-2 py-1.5 text-[11px] font-semibold text-amber-800">
+                      <span className="flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        Price changed from catalog — reason:
+                      </span>
+                      <input
+                        value={item.priceAdjustmentReason || ""}
+                        onChange={(event) => onChange(item.tempId, "priceAdjustmentReason", event.target.value)}
+                        placeholder="e.g. bulk discount, rush fee (internal, not printed)"
+                        className={cn(
+                          "mt-1 w-full rounded border bg-white px-2 py-1.5 text-xs font-normal text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400",
+                          needsReason ? "border-amber-400" : "border-amber-200"
+                        )}
+                      />
+                    </label>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+      {items.length > 0 && (
+        <div className="flex items-center justify-between gap-3 border-t-2 border-slate-300 bg-slate-50 px-4 py-3 md:hidden">
+          <span className="text-xs text-slate-500">
+            {items.length} line{items.length === 1 ? "" : "s"} · {totalQuantity} pcs
+          </span>
+          <span className="text-right">
+            <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Total Amount</span>
+            <span className="font-mono text-base font-extrabold text-slate-900">{formatCurrency(totalAmount)}</span>
+          </span>
+        </div>
+      )}
+
+      <div className="hidden min-h-0 flex-1 overflow-auto md:block">
         <table className="w-full min-w-[720px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-slate-50">
             <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-500">

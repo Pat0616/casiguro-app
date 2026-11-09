@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, Search } from "lucide-react";
 import { cn, formatCurrency, formatDate, formatDocDate } from "@/lib/utils";
-import { PAYMENT_STATUS } from "@/lib/constants";
+import { MOBILE_CARD_LIST, PAYMENT_STATUS } from "@/lib/constants";
 import type { CustomerPaymentFilter, Order } from "@/types";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -128,7 +128,44 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one card per transaction instead of a sideways-scrolling table */}
+          <ul className={`${MOBILE_CARD_LIST} md:hidden`}>
+            {filtered.map((o) => {
+              const pcfg = PAYMENT_STATUS[o.paymentStatus];
+              return (
+                <li key={o.id}>
+                  <button type="button" onClick={() => openOrder(o.id)} className="block w-full px-4 py-3 text-left transition active:bg-slate-50">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-800">{o.customerName}</p>
+                        <p className="font-mono text-xs text-slate-500">
+                          <span className="font-bold text-slate-700">{o.soaNo}</span> · {formatDocDate(o.soaDate)}
+                        </p>
+                      </div>
+                      {!showCancelled && <Badge config={pcfg} label={pcfg.label} />}
+                    </div>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {o.product}
+                      {o.category && ` · ${o.category}`}
+                    </p>
+                    {showCancelled && o.cancelReason && (
+                      <p className="mt-1 line-clamp-2 text-xs text-rose-600">
+                        {o.cancelReason} {o.cancelledByName && <span className="text-slate-400">· {o.cancelledByName}</span>}
+                      </p>
+                    )}
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span className="font-semibold text-slate-800">{formatCurrency(o.totalPrice)}</span>
+                      <span className="text-xs text-slate-500">
+                        {showCancelled ? "Cancelled" : "Completed"} {formatDate(recordDate(o))}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
@@ -170,6 +207,7 @@ export default function CompletedTransactionsPage({ orders, onOrderUpdated }: Co
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

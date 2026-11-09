@@ -56,5 +56,9 @@ export const PAYMENT_STATUS: Record<PaymentStatusKey, { label: string; badge: st
   paid: { label: "Paid", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
-export const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** Phone layout of a list table: each <li> is its own bordered white card on a grey gutter (add md:hidden at the use site) */
+export const MOBILE_CARD_LIST =
+  "space-y-2.5 bg-slate-100/70 p-3 [&>li]:overflow-hidden [&>li]:rounded-xl [&>li]:border [&>li]:border-slate-200 [&>li]:bg-white [&>li]:shadow-sm";
+
+export const MONTH_NAMES =["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const PIE_COLORS = ["#db2777", "#0ea5e9", "#facc15", "#7c3aed", "#10b981", "#f97316"];

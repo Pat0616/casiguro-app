@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, ChevronRight, Search, UserCog, Users } from "lucide-react";
 import type { Account, AccountStatus } from "@/types";
 import { cn, relativeTime } from "@/lib/utils";
+import { MOBILE_CARD_LIST } from "@/lib/constants";
 import Card from "@/components/ui/Card";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Badge from "@/components/ui/Badge";
@@ -134,7 +135,51 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one card per account instead of a sideways-scrolling table.
+              Not a <button>: the action buttons inside stop propagation, like in the table row. */}
+          <ul className={`${MOBILE_CARD_LIST} md:hidden`}>
+            {visible.map((account) => {
+              const lastLogin = parseServerDate(account.lastLoginAt);
+              return (
+                <li
+                  key={account.id}
+                  onClick={() => navigate(`/accounts/${account.id}`)}
+                  className="cursor-pointer px-4 py-3 transition active:bg-slate-50"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar name={account.fullName} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-slate-800">
+                        {account.fullName}
+                        {account.id === user?.id && <span className="ml-1.5 rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">YOU</span>}
+                      </p>
+                      <p className="truncate text-xs text-slate-400">{account.email}</p>
+                      {account.contactNumber && <p className="text-xs text-slate-500">{account.contactNumber}</p>}
+                    </div>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300" />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Badge config={ROLE_BADGE[account.role]} label={ROLE_BADGE[account.role].label} />
+                    <Badge config={ACCOUNT_STATUS[account.status]} label={ACCOUNT_STATUS[account.status].label} />
+                    <span className="text-xs text-slate-500">
+                      · {lastLogin ? `Signed in ${relativeTime(lastLogin)}` : "Never signed in"} · {account.auditCount} actions
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">Registered {formatDateTime(account.registeredAt)}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 empty:hidden">
+                    <AccountActions
+                      account={account}
+                      currentUserId={user?.id}
+                      onAction={(action) => setPendingAction({ account, action })}
+                      onPromote={() => setPromoteTarget(account)}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[960px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-400">
@@ -193,6 +238,7 @@ export default function AccountsPage({ onPendingCountChange }: AccountsPageProps
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

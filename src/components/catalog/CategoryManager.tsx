@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { AlertCircle, Edit2, FolderPlus, Loader2, Plus, Tags, Trash2, X } from "lucide-react";
 import type { Category } from "@/types";
+import { MOBILE_CARD_LIST } from "@/lib/constants";
 import { createCategory, deleteCategory, updateCategory } from "@/utils/categoryAPI";
 
 interface CategoryManagerProps {
@@ -114,7 +115,43 @@ export default function CategoryManager({ categories, loading, error, onChanged 
           <p className="mt-1 text-xs text-slate-500">Create your first category, then assign it to catalog items.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Phones: one card per category instead of a sideways-scrolling table */}
+        <ul className={`${MOBILE_CARD_LIST} md:hidden`}>
+          {categories.map((category) => (
+            <li key={category.id} className="flex items-start gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-900">{category.name}</p>
+                {category.description && <p className="mt-0.5 text-xs text-slate-500">{category.description}</p>}
+                <p className="mt-1 text-xs text-slate-400">
+                  {category.productCount} item{category.productCount === 1 ? "" : "s"} · {category.orderCount} order{category.orderCount === 1 ? "" : "s"}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  onClick={() => openForm(category)}
+                  aria-label={`Edit ${category.name}`}
+                  className="rounded-md p-2 text-slate-400 transition hover:bg-sky-50 hover:text-sky-700"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteTarget(category);
+                    setDeleteError(null);
+                  }}
+                  aria-label={`Delete ${category.name}`}
+                  className="rounded-md p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wide text-slate-500">
               <tr className="border-b border-slate-200">
@@ -162,6 +199,7 @@ export default function CategoryManager({ categories, loading, error, onChanged 
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Add / edit */}
