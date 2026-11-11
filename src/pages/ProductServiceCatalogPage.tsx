@@ -24,13 +24,14 @@ import {
   toggleCatalogItemStatus,
   type CatalogItemPayload,
 } from "@/utils/catalogAPI";
-import { getCategories } from "@/utils/categoryAPI";
+import { createCategory, getCategories } from "@/utils/categoryAPI";
 import CategoryManager from "@/components/catalog/CategoryManager";
 import { uploadImageToCloudinary } from "@/utils/CloudinaryAPI";
 import { cn } from "@/lib/utils";
 import PriceInput from "@/components/ui/PriceInput";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // Cloudinary free-plan image limit
+const NEW_CATEGORY_OPTION = "__new_category__"; // dropdown value that opens the quick-add box, never saved
 
 function formatCurrency(n: number) {
   return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -70,6 +71,11 @@ export default function ProductServiceCatalogPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageDragActive, setImageDragActive] = useState(false);
+  // Quick "Add new category" from the item form's Category dropdown (same as the Categories tab's Add Category)
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryError, setNewCategoryError] = useState<string | null>(null);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const availableCategories = Array.from(
     new Set([
       ...items
@@ -145,11 +151,43 @@ export default function ProductServiceCatalogPage() {
     setIsModalOpen(true);
   };
 
+  const closeNewCategory = () => {
+    setNewCategoryOpen(false);
+    setNewCategoryName("");
+    setNewCategoryError(null);
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
     setFormError(null);
     setImageDragActive(false);
+    closeNewCategory();
+  };
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim().replace(/\s+/g, " ");
+    if (!name) return setNewCategoryError("Enter a category name.");
+    const duplicate = categories.find((category) => category.name.toLowerCase() === name.toLowerCase());
+    if (duplicate) {
+      // Already exists: just pick it
+      setFormData((current) => ({ ...current, categoryId: duplicate.id }));
+      closeNewCategory();
+      return;
+    }
+    try {
+      setCreatingCategory(true);
+      setNewCategoryError(null);
+      const created = await createCategory({ name });
+      setCategories((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setFormData((current) => ({ ...current, categoryId: created.id }));
+      closeNewCategory();
+      fetchCategories();
+    } catch (err: unknown) {
+      setNewCategoryError(err instanceof Error ? err.message : "Failed to create category.");
+    } finally {
+      setCreatingCategory(false);
+    }
   };
 
   const uploadImageFile = async (file: File) => {
@@ -791,7 +829,14 @@ export default function ProductServiceCatalogPage() {
                       <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
                       <select
                         value={formData.categoryId || ""}
-                        onChange={(e) => setFormData({ ...formData, categoryId: e.target.value || null })}
+                        onChange={(e) => {
+                          if (e.target.value === NEW_CATEGORY_OPTION) {
+                            setNewCategoryOpen(true);
+                            setNewCategoryError(null);
+                            return;
+                          }
+                          setFormData({ ...formData, categoryId: e.target.value || null });
+                        }}
                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                       >
                         <option value="">General (no category)</option>
@@ -800,10 +845,56 @@ export default function ProductServiceCatalogPage() {
                             {category.name}
                           </option>
                         ))}
+                        <option value={NEW_CATEGORY_OPTION}>+ Add new category…</option>
                       </select>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        {categories.length === 0 ? "No categories yet. " : ""}New categories are added in the Categories tab.
-                      </p>
+                      {newCategoryOpen ? (
+                        <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
+                          <input
+                            autoFocus
+                            maxLength={100}
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            onKeyDown={(e) => {
+                              // Enter would submit the item form
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleCreateCategory();
+                              } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                closeNewCategory();
+                              }
+                            }}
+                            placeholder="New category name"
+                            aria-label="New category name"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          />
+                          {newCategoryError && <p role="alert" className="mt-1 text-[11px] text-rose-600">{newCategoryError}</p>}
+                          <div className="mt-2 flex justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={closeNewCategory}
+                              disabled={creatingCategory}
+                              className="rounded-md px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCreateCategory}
+                              disabled={creatingCategory}
+                              className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-sky-700 disabled:cursor-wait disabled:opacity-60"
+                            >
+                              {creatingCategory && <Loader2 className="h-3 w-3 animate-spin" />}
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          Rename or delete categories in the Categories tab.
+                        </p>
+                      )}
                     </div>
                   </div>
 
