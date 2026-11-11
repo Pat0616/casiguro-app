@@ -39,6 +39,36 @@ export function updateOrderDueDate(id: string, payload: { dueDate: string; reaso
   });
 }
 
+/** One line of an order items edit: existing lines carry `id` + `previous` (for the conflict check), new lines don't */
+export interface OrderItemEditLine {
+  id?: string;
+  productServiceId?: string | null;
+  itemName?: string;
+  selectedVariant?: string | null;
+  itemDescription?: string;
+  category?: string;
+  itemType?: "product" | "service";
+  isCustom?: boolean;
+  quantity: number;
+  finalUnitPrice: number;
+  priceAdjustmentReason?: string | null;
+  previous?: { quantity: number; finalUnitPrice: number; quantityCompleted: number };
+}
+
+/**
+ * Open orders only (any employee). Add / remove lines, change quantity or unit price; reason required.
+ * 409 (`conflict`) if the order changed since it was loaded; 400 if the new total is below what's already paid.
+ */
+export function updateOrderItems(
+  id: string,
+  payload: { reason: string; expectedTotal: number; items: OrderItemEditLine[]; removedItemIds: string[] }
+): Promise<Order> {
+  return apiRequest(`/api/orders/${id}/items`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updateItemProduction(
   orderId: string,
   payload: {

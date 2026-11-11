@@ -1,6 +1,6 @@
 // casiguro-app/src/components/orders/UpdateOrderModal.tsx
 import { useEffect, useState, type ReactNode } from "react";
-import { CheckCircle2, Boxes, Briefcase, AlertCircle, ArrowRight, CalendarClock, ChevronDown, FileText, Wallet, XCircle, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Boxes, Briefcase, AlertCircle, ArrowRight, CalendarClock, ChevronDown, FileText, PencilLine, Wallet, XCircle, type LucideIcon } from "lucide-react";
 import { cn, daysDiff, formatCurrency, formatDate } from "@/lib/utils";
 import { GRADIENT, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import type { Order, OrderItem, OrderStatus } from "@/types";
@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthenticationContext";
 import PaymentsPanel from "@/components/orders/PaymentsPanel";
 import ReasonModal from "@/components/orders/ReasonModal";
 import DeadlineModal from "@/components/orders/DeadlineModal";
+import EditOrderItemsModal from "@/components/orders/EditOrderItemsModal";
 import ProductionQtyInput, { parseAdded } from "@/components/orders/ProductionQtyInput";
 
 interface UpdateOrderModalProps {
@@ -39,6 +40,7 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [editDeadline, setEditDeadline] = useState(false);
+  const [editItems, setEditItems] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Concurrency: `baseline` is the server value each item's edit started from (sent back on save so the server can
   // refuse a stale save), `dirty` the items this user changed, `conflicts` the new server value of a dirty item
@@ -271,23 +273,35 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
               <CalendarClock className="h-4 w-4 text-slate-400" />
               Due <strong className="text-slate-800">{formatDate(liveOrder.dueDate)}</strong>
               <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", due.tone)}>{due.text}</span>
-              {canChangeDeadline && (
-                <button
-                  type="button"
-                  onClick={() => setEditDeadline(true)}
-                  className="ml-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-50"
-                >
-                  Change
-                </button>
-              )}
             </span>
           </div>
+
+          {/* Order changes: each opens its own window and saves on its own */}
+          {canChangeDeadline && (
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <OrderActionButton
+                  icon={CalendarClock}
+                  label="Change deadline"
+                  hint={`Due ${formatDate(liveOrder.dueDate)}`}
+                  onClick={() => setEditDeadline(true)}
+                />
+                <OrderActionButton
+                  icon={PencilLine}
+                  label="Edit items & prices"
+                  hint={changedItemCount > 0 ? "Save or undo production changes first" : "Add items, change qty or price"}
+                  onClick={() => setEditItems(true)}
+                  disabled={changedItemCount > 0 || items.length === 0}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Item-Level Production Tracking */}
         {items.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Items ({items.length})
               </h4>
@@ -532,7 +546,49 @@ export default function UpdateOrderModal({ order, onClose, onOrderChange, onSave
         onClose={() => setEditDeadline(false)}
         onSaved={handlePaymentChange}
       />
+
+      {/* Saves on its own; the item list reloads from the saved order (only opened with no unsaved production edits) */}
+      <EditOrderItemsModal
+        order={editItems ? liveOrder : null}
+        onClose={() => setEditItems(false)}
+        onSaved={(updated) => {
+          loadOrder(updated);
+          onOrderChange(updated);
+        }}
+      />
     </Modal>
+  );
+}
+
+// Large outlined button with an icon tile and a one-line hint (Change deadline / Edit items & prices)
+function OrderActionButton({
+  icon: Icon,
+  label,
+  hint,
+  onClick,
+  disabled = false,
+}: {
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="group flex w-full items-center gap-3 rounded-xl border-2 border-sky-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:shadow-none"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 transition group-hover:bg-sky-600 group-hover:text-white group-disabled:bg-slate-200 group-disabled:text-slate-400">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-bold text-slate-900 group-disabled:text-slate-400">{label}</span>
+        <span className="block truncate text-xs text-slate-500 group-disabled:text-slate-400">{hint}</span>
+      </span>
+    </button>
   );
 }
 

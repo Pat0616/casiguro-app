@@ -27,6 +27,7 @@ import {
   Lock,
   LockKeyhole,
   LockKeyholeOpen,
+  ListPlus,
   LogIn,
   LogOut,
   MailQuestion,
@@ -79,6 +80,7 @@ export const ACTIVITY: Record<string, ActivityStyle> = {
   "order.update": style(PenLine, TINT.amber, "Order edited"),
   "order.documents_update": style(FilePen, TINT.amber, "Documents edited"),
   "order.deadline_change": style(CalendarClock, TINT.amber, "Deadline changed"),
+  "order.items_update": style(ListPlus, TINT.amber, "Items changed"),
   "order.cancel": style(Ban, TINT.rose, "Order cancelled"),
   // Payments
   "payment.record": style(Banknote, TINT.green, "Payment recorded"),
