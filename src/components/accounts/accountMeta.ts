@@ -1,6 +1,6 @@
 import { Boxes, CreditCard, FileText, LogIn, ShoppingBag, UserCog, type LucideIcon } from "lucide-react";
 import type { AccountStatus, AuditCategory } from "@/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, isoDate } from "@/lib/utils";
 
 export const ACCOUNT_STATUS: Record<AccountStatus, { label: string; badge: string; dot: string }> = {
   pending: { label: "Pending approval", badge: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
@@ -52,7 +52,62 @@ export function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-const MONEY_FIELDS = new Set(["amountPaid", "balance", "totalPrice", "unitPrice", "basePrice", "totalAmount"]);
+export function formatTimeWithSeconds(date: Date): string {
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+}
+
+// Pulls the user-typed reason out of an audit description so it can be shown on its own. Descriptions are written
+// by the server in a few fixed shapes; anything else is returned unchanged with no reason.
+const REASON_PATTERNS: Array<{ actions: string[] | null; pattern: RegExp; text: (m: RegExpMatchArray) => string }> = [
+  // "Deadline for SOA … (was …). Reason: X" / "Items on SOA … updated: …. Reason: X"
+  { actions: null, pattern: /^([\s\S]*?)\.?\s*Reason: ([\s\S]+)$/, text: (m) => `${m[1]}.` },
+  // "Voided Payment ₱300.00 via Cash on SOA 2026-10-7: X. New balance: ₱20,900.00"
+  {
+    actions: ["payment.void"],
+    pattern: /^(Voided .+? on SOA \S+): ([\s\S]+)\. (New balance: .+)$/,
+    text: (m) => `${m[1]}. ${m[3]}`,
+  },
+  // "SOA 2026-10-7 was cancelled: X"
+  { actions: ["order.cancel"], pattern: /^(.+? was cancelled): ([\s\S]+)$/, text: (m) => m[1] },
+  // "Rejected the registration of Name (email): X" / "Deactivated admin account Name (email): X"
+  { actions: ["account.reject", "account.deactivate"], pattern: /^(.+?\)): ([\s\S]+)$/, text: (m) => m[1] },
+  // "Marked quotation QTN-… (Customer) as rejected: X"
+  { actions: ["quotation.status_change"], pattern: /^(Marked quotation .+? as \w+): ([\s\S]+)$/, text: (m) => m[1] },
+];
+
+export function splitReason(entry: { action: string; description: string }): { text: string; reason: string | null } {
+  for (const { actions, pattern, text } of REASON_PATTERNS) {
+    if (actions && !actions.includes(entry.action)) continue;
+    const match = entry.description.match(pattern);
+    if (!match) continue;
+    const reason = match[2]?.trim(); // every pattern captures the reason as group 2
+    if (reason) return { text: text(match).trim(), reason };
+  }
+  return { text: entry.description, reason: null };
+}
+
+// Quick date ranges for the activity log filter (YYYY-MM-DD, local time)
+export type DatePreset = "all" | "today" | "7d" | "30d" | "month";
+export const DATE_PRESETS: { key: DatePreset; label: string }[] = [
+  { key: "all", label: "All time" },
+  { key: "today", label: "Today" },
+  { key: "7d", label: "Last 7 days" },
+  { key: "30d", label: "Last 30 days" },
+  { key: "month", label: "This month" },
+];
+
+export function presetRange(preset: DatePreset): { from: string; to: string } {
+  if (preset === "all") return { from: "", to: "" };
+  const today = new Date();
+  const to = isoDate(today);
+  if (preset === "today") return { from: to, to };
+  if (preset === "month") return { from: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)), to };
+  const start = new Date(today);
+  start.setDate(start.getDate() - (preset === "7d" ? 6 : 29));
+  return { from: isoDate(start), to };
+}
+
+const MONEY_FIELDS =new Set(["amountPaid", "balance", "totalPrice", "unitPrice", "basePrice", "totalAmount"]);
 
 // "amountPaid" -> "Amount paid"; labels that already contain spaces (e.g. "PO No") are kept
 export function fieldLabel(field: string): string {
