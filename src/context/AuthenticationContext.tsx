@@ -10,7 +10,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     axios
       .get(`${BASE_URL}/api/auth/me`, { withCredentials: true })
-      .then(res => setUser(res.data))
+      // Only a real user object counts (a misconfigured API URL can answer 200 with an HTML page)
+      .then(res => setUser(res.data && typeof res.data === "object" && res.data.id ? res.data : null))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);

@@ -107,8 +107,8 @@ function MainApp() {
           getOrders(),
           getNotifications(),
         ]);
-        setOrders(ordersData);
-        setNotifications(notifsData);
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
+        setNotifications(Array.isArray(notifsData) ? notifsData : []);
       } catch (err) {
         console.error("Error loading initial data:", err);
       }
