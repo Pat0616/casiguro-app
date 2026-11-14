@@ -44,8 +44,8 @@ export default function LoginPage() {
 
       {/* LEFT BRANDING PANEL */}
       <section className="login-brand-panel">
-         <img src="TopBladeCasiguro.svg" alt="CASIguro Printing Services" className="casiguro-brandblade" />
-         <img src="BottomDesignCasiguro.svg" alt="CASIguro Printing Services" className="casiguro-brandblade2" />
+         <img src="/TopBladeCasiguro.svg" alt="CASIguro Printing Services" className="casiguro-brandblade" />
+         <img src="/BottomDesignCasiguro.svg" alt="CASIguro Printing Services" className="casiguro-brandblade2" />
 
         <div className="brand-content">
 

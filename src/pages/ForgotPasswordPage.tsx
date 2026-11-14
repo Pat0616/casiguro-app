@@ -81,8 +81,8 @@ export default function ForgotPasswordPage() {
     <div className="login-page">
       <div className="login-shell">
         <section className="login-brand-panel">
-          <img src="TopBladeCasiguro.svg" alt="" className="casiguro-brandblade" />
-          <img src="BottomDesignCasiguro.svg" alt="" className="casiguro-brandblade2" />
+          <img src="/TopBladeCasiguro.svg" alt="" className="casiguro-brandblade" />
+          <img src="/BottomDesignCasiguro.svg" alt="" className="casiguro-brandblade2" />
           <div className="brand-content">
             <div className="logo-container">
               <div className="casiguro-logo" />
