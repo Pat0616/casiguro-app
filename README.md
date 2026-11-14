@@ -39,6 +39,21 @@ with a code, then wait for an admin to approve them under **Accounts & Audit**.
 
 Vite bakes `VITE_*` values in at **build time**. After changing one, restart `npm run dev` or rebuild.
 
+## Deploying to Vercel (free Hobby plan)
+
+`vercel.json` holds the build settings and sends every path to `index.html`, so React Router links such as
+`/accounts/5` work on reload.
+
+1. Sign in at vercel.com with GitHub → **Add New → Project** → import this repository. Vercel reads `vercel.json`;
+   leave the root directory as `./`.
+2. Under **Environment Variables** add `VITE_API_URL` = the backend's HTTPS URL (no trailing slash). An `http://`
+   backend is blocked by the browser on an `https://` page.
+3. Deploy. Every push to `main` redeploys; other branches get preview URLs.
+4. In the backend `.env`, set `CLIENT_ORIGIN` to the exact Vercel URL (e.g. `https://casiguro.vercel.app`) and restart
+   it. Add preview URLs there too (comma-separated) if you want them to reach the API.
+
+Changing `VITE_API_URL` needs a **redeploy** (Deployments → ⋯ → Redeploy), since Vite bakes it in at build time.
+
 ## Features
 
 | Area | Who | What |
