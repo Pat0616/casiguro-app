@@ -1,18 +1,16 @@
 import { cn } from "@/lib/utils";
-import { GRADIENT } from "@/lib/constants";
+
+// The company logo from public/. The 500x500 image has empty margins; its artwork (swoosh + name) is a 418x178
+// box at its centre, so the box keeps that ratio and the background is scaled to 500/418 to crop the margins.
+const LOGO_SRC = "/CasiguroEnterpriseLogo.webp";
 
 export default function Logo({ compact }: { compact?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 px-1">
-      <div className={cn(GRADIENT, "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-display text-sm font-extrabold text-white")}>
-        C
-      </div>
-      {!compact && (
-        <div className="leading-tight">
-          <p className="font-display text-base font-extrabold text-slate-900">CASIGURO</p>
-          <p className="text-[11px] font-semibold tracking-widest text-slate-400">ENTERPRISES, INC.</p>
-        </div>
-      )}
-    </div>
+    <div
+      role="img"
+      aria-label="Casiguro Enterprises, Inc."
+      className={cn("shrink-0 bg-center bg-no-repeat", compact ? "h-9" : "h-12")}
+      style={{ aspectRatio: "418 / 178", backgroundImage: `url(${LOGO_SRC})`, backgroundSize: `${(500 / 418) * 100}% auto` }}
+    />
   );
 }

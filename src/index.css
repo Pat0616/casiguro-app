@@ -20,7 +20,7 @@ body {
     width: 100%;
     height: 6rem;
 
-    background-image: url("./assets/CasiguroEnterpriseLogo.webp");
+    background-image: url("/CasiguroEnterpriseLogo.webp");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
